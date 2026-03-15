@@ -5,7 +5,7 @@ import { Mistral } from '@mistralai/mistralai';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import mime from 'mime-types';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
