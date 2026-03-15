@@ -14,12 +14,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 
 app.use(express.json({ limit: '20mb' }));
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
-    if (filePath.endsWith('.js'))  res.setHeader('Content-Type', 'application/javascript');
-  }
-}));
+express.static.mime.define({'text/css': ['css']});
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── PAGE ROUTES ────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'login.html')));
