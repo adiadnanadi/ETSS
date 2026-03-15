@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KvizMajstor — Kreiraj kviz</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .pg { padding: 32px 0 60px; }
+    .pg-hdr { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+    .pg-hdr h1 { font-family:var(--fd); font-size:24px; font-weight:700; }
+
+    /* Steps */
+    .steps { display:flex; align-items:center; margin-bottom:32px; }
+    .step  { display:flex; align-items:center; gap:10px; flex:1; }
+    .step:last-child { flex:none; }
+    .sc    { width:32px; height:32px; border-radius:50%; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:var(--text3); background:var(--bg2); flex-shrink:0; transition:all var(--t); }
+    .sc.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+    .sc.done   { border-color:var(--green);  color:var(--green);  background:var(--green-dim); }
+    .sl    { font-size:13px; color:var(--text3); white-space:nowrap; }
+    .sl.active { color:var(--text); font-weight:500; }
+    .sline { flex:1; height:1px; background:var(--border); margin:0 10px; transition:background var(--t); }
+    .sline.done { background:var(--green); }
+
+    /* Grid */
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+    @media(max-width:768px){ .grid2 { grid-template-columns:1fr; } }
+
+    /* PDF drop */
+    .pdf-drop { border:2px dashed var(--border2); border-radius:var(--r-lg); padding:40px 20px; text-align:center; cursor:pointer; transition:all var(--t); display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .pdf-drop:hover, .pdf-drop.over { border-color:var(--accent); background:var(--accent-dim); }
+    .pdf-icon { font-size:36px; }
+    .pdf-name { font-size:14px; font-weight:500; word-break:break-all; }
+    .pdf-sz   { font-size:12px; color:var(--text3); }
+    .pdf-hint { font-size:12px; color:var(--text3); }
+
+    .ck-row { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+    .ck-lbl { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); cursor:pointer; }
+    .ck-lbl input { width:16px; height:16px; accent-color:var(--accent); }
+
+    /* Generating */
+    .gen-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:80px 40px; text-align:center; }
+    .gen-icon { font-size:60px; animation:pulse 2s ease infinite; }
+    .gen-bar  { width:100%; max-width:400px; height:6px; background:var(--bg3); border-radius:100px; overflow:hidden; }
+    .gen-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--purple)); border-radius:100px; animation:progAnim 3s ease-in-out infinite; }
+    @keyframes progAnim { 0%{width:0%} 70%{width:85%} 100%{width:95%} }
+    .gen-steps { display:flex; gap:18px; font-size:13px; color:var(--text3); flex-wrap:wrap; justify-content:center; }
+
+    /* Preview */
+    .prev-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; gap:16px; flex-wrap:wrap; }
+    .prev-title { font-family:var(--fd); font-size:22px; font-weight:700; margin-bottom:6px; }
+    .prev-desc  { font-size:14px; color:var(--text2); margin-bottom:12px; }
+    .prev-meta  { display:flex; flex-wrap:wrap; gap:8px; }
+    .prev-acts  { display:flex; gap:10px; flex-shrink:0; flex-wrap:wrap; }
+
+    .q-list { display:flex; flex-direction:column; gap:12px; }
+    .q-item { }
+    .q-hdr  { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .q-num  { font-family:var(--fm); font-size:12px; color:var(--text3); background:var(--bg3); padding:2px 8px; border-radius:6px; }
+    .q-pts  { margin-left:auto; font-size:12px; color:var(--amber); font-weight:500; }
+    .q-text { font-size:15px; font-weight:500; margin-bottom:12px; line-height:1.5; }
+    .opts   { display:flex; flex-direction:column; gap:6px; }
+    .opt    { padding:8px 12px; border-radius:var(--r); font-size:13px; background:var(--bg3); border:1px solid var(--border); color:var(--text2); display:flex; align-items:center; gap:8px; }
+    .opt.correct { background:var(--green-dim); border-color:rgba(74,222,128,.3); color:var(--green); }
+    .expl { margin-top:10px; padding:9px 13px; border-radius:var(--r); background:var(--amber-dim); border:1px solid rgba(251,191,36,.2); font-size:13px; color:var(--amber); line-height:1.5; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="wrap">
+      <a class="nb-brand" href="/admin"><span class="nb-logo">📚</span><span class="nb-title">KvizMajstor</span></a>
+      <div class="nb-right">
+        <span class="badge badge-purple">👑 Admin</span>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap pg">
+    <div class="pg-hdr">
+      <a href="/admin" class="btn btn-ghost btn-sm">← Nazad</a>
+      <h1>✨ Kreiraj novi kviz</h1>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="steps" id="steps">
+      <div class="step"><div class="sc active" id="sc1">1</div><span class="sl active" id="sl1">Konfiguracija</span></div>
+      <div class="sline" id="sline1"></div>
+      <div class="step"><div class="sc" id="sc2">2</div><span class="sl" id="sl2">Generisanje</span></div>
+      <div class="sline" id="sline2"></div>
+      <div class="step"><div class="sc" id="sc3">3</div><span class="sl" id="sl3">Pregled i čuvanje</span></div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div id="step1">
+      <div class="grid2">
+        <div class="card">
+          <div style="font-family:var(--fd);font-size:18px;font-weight:600;margin-bottom:6px">📄 Upload gradiva (PDF)</div>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">AI će analizirati PDF i generisati pitanja na osnovu sadržaja</p>
+          <div class="pdf-drop" id="pdf-drop" onclick="document.getElementById('pdf-input').click()">
+            <input type="file" id="pdf-input" accept=".pdf" hidden />
+            <div class="pdf-icon">⬆️</div>
+            <div style="font-size:14px;font-weight:500;color:var(--text2)">Kliknite ili povucite PDF ovdje</div>
+            <div class="pdf-hint">Max 20MB · Svi PDF fajlovi</div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-family:var(--fd);font-size:18px;font-weight:600;margin-bottom:16px">⚙️ Podešavanja kviza</div>
+          <div class="fg">
+            <label>Predmet</label>
+            <input class="input" id="subject" placeholder="Npr. Autoelektrika, Elektronika..." />
+          </div>
+          <div class="fg">
+            <label>Tema / Modul</label>
+            <input class="input" id="topic" placeholder="Npr. Module M4, Senzori..." />
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>Broj pitanja</label>
+              <select class="select" id="numQ">
+                <option value="5">5 pitanja</option>
+                <option value="8">8 pitanja</option>
+                <option value="10" selected>10 pitanja</option>
+                <option value="12">12 pitanja</option>
+                <option value="15">15 pitanja</option>
+                <option value="20">20 pitanja</option>
+                <option value="25">25 pitanja</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Vremenski limit</label>
+              <select class="select" id="timeLimit">
+                <option value="10">10 minuta</option>
+                <option value="15">15 minuta</option>
+                <option value="20">20 minuta</option>
+                <option value="30" selected>30 minuta</option>
+                <option value="45">45 minuta</option>
+                <option value="60">60 minuta</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>Težina</label>
+              <select class="select" id="difficulty">
+                <option value="lako">Lako</option>
+                <option value="srednje" selected>Srednje</option>
+                <option value="teško">Teško</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Tip pitanja</label>
+              <select class="select" id="qtype">
+                <option value="multiple_choice">Višestruki odabir</option>
+                <option value="true_false">Tačno / Netačno</option>
+                <option value="mixed">Mješovito</option>
+              </select>
+            </div>
+          </div>
+          <div class="ck-row">
+            <label class="ck-lbl"><input type="checkbox" id="shuffle" checked />Miješaj redosljed pitanja</label>
+            <label class="ck-lbl"><input type="checkbox" id="showExpl" checked />Pokaži objašnjenja na kraju</label>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-primary btn-lg" id="gen-btn" disabled>🤖 Generiši kviz s AI</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="step2" style="display:none" class="gen-state">
+      <div class="gen-icon">🤖</div>
+      <h2 style="font-family:var(--fd);font-size:24px">Mistral AI analizira gradivo...</h2>
+      <p style="font-size:15px;color:var(--text2);max-width:400px">Generišemo pitanja na osnovu vašeg PDF-a. Ovo može potrajati 15–30 sekundi.</p>
+      <div class="gen-bar"><div class="gen-fill"></div></div>
+      <div class="gen-steps">
+        <span>📖 Čitanje PDF-a</span><span>🧠 Analiza sadržaja</span><span>❓ Kreiranje pitanja</span><span>✅ Finalizacija</span>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div id="step3" style="display:none">
+      <div class="card prev-hdr">
+        <div>
+          <div class="prev-title" id="prev-title"></div>
+          <div class="prev-desc"  id="prev-desc"></div>
+          <div class="prev-meta" id="prev-meta"></div>
+        </div>
+        <div class="prev-acts">
+          <button class="btn btn-ghost" id="regen-btn">🔄 Generiši ponovo</button>
+          <button class="btn btn-primary" id="save-btn">💾 Sačuvaj kviz</button>
+        </div>
+      </div>
+      <div class="q-list" id="q-list"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { doc, getDoc, addDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { toast, btnLoad, btnReset } from '/js/utils.js';
+
+    // Auth guard
+    onAuthStateChanged(auth, async (u) => {
+      if (!u) { window.location.href = '/login'; return; }
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      if (snap.data()?.role !== 'admin') { window.location.href = '/student'; return; }
+    });
+
+    document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = '/login');
+
+    let pdfFile = null;
+    let generatedQuiz = null;
+
+    // PDF drop
+    const drop = document.getElementById('pdf-drop');
+    const inp  = document.getElementById('pdf-input');
+
+    inp.addEventListener('change', () => setPdf(inp.files[0]));
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); setPdf(e.dataTransfer.files[0]); });
+
+    function setPdf(f) {
+      if (!f || f.type !== 'application/pdf') { toast('Odaberite PDF fajl', 'error'); return; }
+      pdfFile = f;
+      drop.innerHTML = `<div class="pdf-icon">📄</div><div class="pdf-name">${f.name}</div><div class="pdf-sz">${(f.size/1024/1024).toFixed(2)} MB</div><button class="btn btn-ghost btn-sm" id="change-pdf">Promijeni</button>`;
+      document.getElementById('change-pdf').onclick = (e) => { e.stopPropagation(); pdfFile = null; drop.innerHTML = `<div class="pdf-icon">⬆️</div><div style="font-size:14px;font-weight:500;color:var(--text2)">Kliknite ili povucite PDF ovdje</div><div class="pdf-hint">Max 20MB · Svi PDF fajlovi</div>`; document.getElementById('gen-btn').disabled = true; };
+      document.getElementById('gen-btn').disabled = false;
+    }
+
+    function setStep(n) {
+      [1,2,3].forEach(i => {
+        document.getElementById('step'+i).style.display = i === n ? 'block' : 'none';
+        const sc = document.getElementById('sc'+i), sl = document.getElementById('sl'+i);
+        sc.className = 'sc' + (i < n ? ' done' : i === n ? ' active' : '');
+        sc.textContent = i < n ? '✓' : i;
+        sl.className = 'sl' + (i === n ? ' active' : '');
+        if (i < 3) document.getElementById('sline'+i).className = 'sline' + (i < n ? ' done' : '');
+      });
+    }
+
+    // Generate
+    document.getElementById('gen-btn').onclick = async () => {
+      setStep(2);
+      try {
+        const fd = new FormData();
+        fd.append('pdf', pdfFile);
+        fd.append('numQuestions', document.getElementById('numQ').value);
+        fd.append('difficulty', document.getElementById('difficulty').value);
+        fd.append('questionTypes', document.getElementById('qtype').value);
+        fd.append('subject', document.getElementById('subject').value);
+        fd.append('topic', document.getElementById('topic').value);
+
+        const res = await fetch('/api/generate-quiz', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        generatedQuiz = {
+          ...data.quiz,
+          timeLimit: +document.getElementById('timeLimit').value,
+          shuffleQuestions: document.getElementById('shuffle').checked,
+          showExplanations: document.getElementById('showExpl').checked
+        };
+        renderPreview();
+        setStep(3);
+        toast(`Generisano ${generatedQuiz.questions.length} pitanja!`, 'success');
+      } catch(e) {
+        toast('Greška: ' + e.message, 'error');
+        setStep(1);
+      }
+    };
+
+    function renderPreview() {
+      document.getElementById('prev-title').textContent = generatedQuiz.title;
+      document.getElementById('prev-desc').textContent  = generatedQuiz.description;
+      document.getElementById('prev-meta').innerHTML = `
+        <span class="chip">❓ ${generatedQuiz.questions.length} pitanja</span>
+        <span class="chip">⚡ ${generatedQuiz.difficulty}</span>
+        <span class="chip">⏱ ${generatedQuiz.timeLimit} min</span>
+        <span class="chip">🏆 ${generatedQuiz.totalPoints} bodova</span>`;
+
+      document.getElementById('q-list').innerHTML = generatedQuiz.questions.map((q, i) => `
+        <div class="card q-item" id="qi-${i}">
+          <div class="q-hdr">
+            <span class="q-num">#${i+1}</span>
+            <span class="badge ${q.type === 'true_false' ? 'badge-purple' : 'badge-blue'}">${q.type === 'true_false' ? 'T/N' : 'Višestruki'}</span>
+            <span class="q-pts">${q.points||1} bod</span>
+            <button class="btn btn-danger btn-sm" onclick="removeQ(${i})">🗑</button>
+          </div>
+          <p class="q-text">${q.question}</p>
+          <div class="opts">${q.options.map(o => `<div class="opt ${o===q.correctAnswer?'correct':''}">${o===q.correctAnswer?'<span>✓</span>':''}${o}</div>`).join('')}</div>
+          ${q.explanation ? `<div class="expl">💡 ${q.explanation}</div>` : ''}
+        </div>`).join('');
+    }
+
+    window.removeQ = (i) => {
+      generatedQuiz.questions.splice(i, 1);
+      generatedQuiz.numQuestions = generatedQuiz.questions.length;
+      generatedQuiz.totalPoints  = generatedQuiz.questions.reduce((s,q) => s + (q.points||1), 0);
+      renderPreview();
+      toast('Pitanje uklonjeno', 'info');
+    };
+
+    document.getElementById('regen-btn').onclick = () => { generatedQuiz = null; setStep(1); };
+
+    document.getElementById('save-btn').onclick = async () => {
+      const btn = document.getElementById('save-btn');
+      btnLoad(btn, 'Čuvanje...');
+      try {
+        await addDoc(collection(db, 'quizzes'), { ...generatedQuiz, status: 'inactive', createdAt: new Date().toISOString() });
+        toast('Kviz sačuvan!', 'success');
+        setTimeout(() => window.location.href = '/admin', 800);
+      } catch(e) {
+        toast('Greška pri čuvanju: ' + e.message, 'error');
+        btnReset(btn);
+      }
+    };
+  </script>
+</body>
+</html>

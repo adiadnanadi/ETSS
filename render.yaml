@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: kviz-app
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: NODE_VERSION
+        value: 20

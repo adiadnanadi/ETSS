@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KvizMajstor — Rezultat</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .pg { padding: 32px 0 60px; }
+    .res-hero { text-align:center; padding:40px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .rh-grade { font-family:var(--fd); font-size:88px; font-weight:700; line-height:1; }
+    .rh-label { font-size:18px; font-weight:600; }
+    .rh-score { font-size:15px; color:var(--text2); }
+    .rh-pct   { font-size:30px; font-weight:700; }
+    .feedback-box { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--r-lg); padding:16px 20px; max-width:500px; text-align:left; margin-top:8px; }
+    .fb-lbl { font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+    .fb-text { font-size:14px; color:var(--text2); line-height:1.6; }
+    .res-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+
+    .ans-list { display:flex; flex-direction:column; gap:12px; }
+    .ans-hdr  { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .ans-q    { font-size:14px; font-weight:500; color:var(--text); margin-bottom:10px; line-height:1.5; }
+    .ans-details { display:flex; flex-direction:column; gap:6px; font-size:13px; }
+    .ans-given   { display:flex; gap:8px; align-items:flex-start; }
+    .ans-corr    { display:flex; gap:8px; align-items:flex-start; color:var(--green); }
+    .ans-dl { font-weight:600; color:var(--text3); white-space:nowrap; }
+    .ans-expl { margin-top:10px; padding:9px 13px; border-radius:var(--r); background:var(--amber-dim); border:1px solid rgba(251,191,36,.2); font-size:13px; color:var(--amber); line-height:1.5; }
+
+    .expl-toggle { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="wrap-sm">
+      <a class="nb-brand" href="#" id="nb-back"><span class="nb-logo">📚</span><span class="nb-title">KvizMajstor</span></a>
+      <div class="nb-right">
+        <span class="nb-user" id="nb-email"></span>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div id="phase-loading" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);flex-direction:column;gap:16px">
+    <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
+    <p style="color:var(--text2);font-size:14px">Učitavanje rezultata...</p>
+  </div>
+
+  <div id="phase-result" style="display:none">
+    <div class="wrap-sm pg">
+      <!-- Back btn -->
+      <div style="margin-bottom:24px">
+        <button class="btn btn-ghost btn-sm" id="back-btn">← Nazad</button>
+      </div>
+
+      <!-- Hero -->
+      <div class="card res-hero" id="hero-card">
+        <div class="rh-grade" id="rh-grade"></div>
+        <div class="rh-label" id="rh-label"></div>
+        <div class="rh-score" id="rh-score"></div>
+        <div class="rh-pct"   id="rh-pct"></div>
+        <div class="prog-bar" style="max-width:300px;width:100%">
+          <div class="prog-fill" id="rh-bar" style="width:0%"></div>
+        </div>
+        <div class="feedback-box" id="feedback-box" style="display:none">
+          <div class="fb-lbl">💬 AI povratna informacija</div>
+          <div class="fb-text" id="fb-text"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="res-stats" style="margin-top:16px">
+        <div class="stat-card"><div class="stat-v" id="rs-correct" style="color:var(--green)">-</div><div class="stat-l">Tačnih odgovora</div></div>
+        <div class="stat-card"><div class="stat-v" id="rs-wrong"   style="color:var(--red)">-</div><div class="stat-l">Pogrešnih</div></div>
+        <div class="stat-card"><div class="stat-v" id="rs-empty"   style="color:var(--amber)">-</div><div class="stat-l">Bez odgovora</div></div>
+      </div>
+
+      <!-- Answers -->
+      <div id="answers-section" style="margin-top:20px; display:none">
+        <div class="expl-toggle">
+          <div class="sec-title">Pregled odgovora</div>
+          <button class="btn btn-ghost btn-sm" id="toggle-expl">Pokaži objašnjenja</button>
+        </div>
+        <div class="ans-list" id="ans-list"></div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;justify-content:center;gap:12px;margin-top:24px;flex-wrap:wrap">
+        <button class="btn btn-ghost" id="act-back">← Nazad na listu</button>
+        <button class="btn btn-primary" id="act-retry" style="display:none">🔄 Ponovi kviz</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { pctColor } from '/js/utils.js';
+
+    const params  = new URLSearchParams(location.search);
+    const resultId = params.get('id');
+    const isFresh  = params.get('fresh') === '1';
+
+    let userRole = 'student';
+    let result   = null;
+    let showExpl = false;
+
+    onAuthStateChanged(auth, async (u) => {
+      if (!u) { window.location.href = '/login'; return; }
+      document.getElementById('nb-email').textContent = u.email;
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      userRole = snap.data()?.role || 'student';
+      document.getElementById('nb-back').href = userRole === 'admin' ? '/admin' : '/student';
+      document.getElementById('back-btn').onclick = () => window.location.href = userRole === 'admin' ? '/admin' : '/student';
+      document.getElementById('act-back').onclick = () => window.location.href = userRole === 'admin' ? '/admin' : '/student';
+      await loadResult();
+    });
+
+    document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = '/login');
+
+    async function loadResult() {
+      // Try sessionStorage first (fresh result)
+      if (isFresh) {
+        const cached = sessionStorage.getItem('lastResult');
+        if (cached) { result = JSON.parse(cached); sessionStorage.removeItem('lastResult'); render(); return; }
+      }
+      // Load from Firestore
+      if (resultId) {
+        const snap = await getDoc(doc(db, 'results', resultId));
+        if (snap.exists()) { result = { id: snap.id, ...snap.data() }; render(); return; }
+      }
+      window.location.href = '/student';
+    }
+
+    function render() {
+      const pct = result.percentage;
+      const gc  = result.grade >= 4 ? 'var(--green)' : result.grade === 3 ? 'var(--amber)' : 'var(--red)';
+
+      document.getElementById('rh-grade').textContent = result.grade;
+      document.getElementById('rh-grade').style.color = gc;
+      document.getElementById('rh-label').textContent = result.gradeLabel;
+      document.getElementById('rh-label').style.color = gc;
+      document.getElementById('rh-score').textContent = `${result.earnedPoints} / ${result.totalPoints} bodova`;
+      document.getElementById('rh-pct').textContent   = pct + '%';
+      document.getElementById('rh-pct').style.color   = gc;
+      document.getElementById('rh-bar').style.width   = pct + '%';
+
+      if (result.feedback) {
+        document.getElementById('feedback-box').style.display = 'block';
+        document.getElementById('fb-text').textContent = result.feedback;
+      }
+
+      const gradedAnswers = result.gradedAnswers || [];
+      document.getElementById('rs-correct').textContent = gradedAnswers.filter(a => a.isCorrect).length;
+      document.getElementById('rs-wrong').textContent   = gradedAnswers.filter(a => !a.isCorrect && a.studentAnswer !== 'Bez odgovora').length;
+      document.getElementById('rs-empty').textContent   = gradedAnswers.filter(a => a.studentAnswer === 'Bez odgovora').length;
+
+      if (result.showExplanations !== false && gradedAnswers.length) {
+        document.getElementById('answers-section').style.display = 'block';
+        renderAnswers(gradedAnswers);
+      }
+
+      // Show retry if student owns it
+      if (result.quizId) {
+        const retryBtn = document.getElementById('act-retry');
+        retryBtn.style.display = 'inline-flex';
+        retryBtn.onclick = () => { sessionStorage.setItem('quizId', result.quizId); window.location.href = '/take-quiz?id=' + result.quizId; };
+      }
+
+      document.getElementById('phase-loading').style.display = 'none';
+      document.getElementById('phase-result').style.display  = 'block';
+    }
+
+    function renderAnswers(ans) {
+      document.getElementById('ans-list').innerHTML = ans.map((a, i) => `
+        <div class="card" style="border-left:3px solid ${a.isCorrect ? 'var(--green)' : 'var(--red)'}">
+          <div class="ans-hdr">
+            <span style="font-family:var(--fm);font-size:12px;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:6px">#${i+1}</span>
+            <span class="badge ${a.isCorrect ? 'badge-green' : 'badge-red'}">${a.isCorrect ? `✓ +${a.maxPoints}` : `✗ 0`}</span>
+          </div>
+          <div class="ans-q">${a.question}</div>
+          <div class="ans-details">
+            <div class="ans-given"><span class="ans-dl">Vaš odgovor:</span><span style="color:${a.isCorrect?'var(--green)':'var(--red)'}">${a.studentAnswer}</span></div>
+            ${!a.isCorrect ? `<div class="ans-corr"><span class="ans-dl">Tačan odgovor:</span><span>${a.correctAnswer}</span></div>` : ''}
+          </div>
+          ${a.explanation ? `<div class="ans-expl expl-content" style="display:${showExpl?'block':'none'}">💡 ${a.explanation}</div>` : ''}
+        </div>`).join('');
+    }
+
+    document.getElementById('toggle-expl').onclick = function() {
+      showExpl = !showExpl;
+      this.textContent = showExpl ? 'Sakrij objašnjenja' : 'Pokaži objašnjenja';
+      document.querySelectorAll('.expl-content').forEach(el => el.style.display = showExpl ? 'block' : 'none');
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KvizMajstor — Admin</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .pg { padding:28px 0 60px; }
+    .ph { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; gap:16px; flex-wrap:wrap; }
+    .ph h1 { font-family:var(--fd); font-size:26px; font-weight:700; letter-spacing:-.02em; }
+    .ph p  { font-size:13.5px; color:var(--text2); margin-top:3px; }
+    .qg    { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:16px; }
+    .qc    { display:flex; flex-direction:column; gap:11px; }
+    .qc-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .qc-title { font-family:var(--fd); font-size:15px; font-weight:600; margin-bottom:3px; }
+    .qc-desc  { font-size:12.5px; color:var(--text2); line-height:1.5; }
+    .qc-meta  { display:flex; flex-wrap:wrap; gap:5px; }
+    .qc-foot  { display:flex; gap:7px; flex-wrap:wrap; padding-top:11px; border-top:1px solid var(--border); }
+    .ov-grid  { display:grid; grid-template-columns:1fr 320px; gap:18px; }
+    @media(max-width:880px){ .ov-grid{grid-template-columns:1fr;} }
+    .mini-list { display:flex; flex-direction:column; }
+    .mini-item { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); }
+    .mini-item:last-child { border-bottom:none; }
+    .mini-name { font-size:13.5px; font-weight:500; }
+    .mini-sub  { font-size:12px; color:var(--text3); margin-top:1px; }
+    /* Modal */
+    .modal-bg  { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(4px); animation:fadeUp .2s ease; }
+    .modal     { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:28px; width:90%; max-width:480px; box-shadow:var(--shadow-lg); animation:fadeUp .25s ease; }
+    .modal-title { font-family:var(--fd); font-size:18px; font-weight:600; margin-bottom:16px; }
+    .modal-foot  { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="wrap">
+      <a class="nb-brand" href="/admin"><span class="nb-logo">📚</span><span class="nb-title">KvizMajstor</span></a>
+      <div class="nb-right">
+        <span class="badge badge-purple">👑 Admin</span>
+        <span class="nb-user" id="nb-email"></span>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap pg">
+    <div class="ph">
+      <div><h1>Admin Panel</h1><p>Upravljanje kvizovima i praćenje napretka učenika</p></div>
+      <a href="/create-quiz" class="btn btn-primary">✨ Novi kviz</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-v" id="s-quizzes" style="color:var(--accent)">—</div><div class="stat-l">Ukupno kvizova</div></div>
+      <div class="stat-card"><div class="stat-v" id="s-active"  style="color:var(--green)">—</div><div class="stat-l">Aktivnih kvizova</div></div>
+      <div class="stat-card"><div class="stat-v" id="s-students" style="color:var(--purple)">—</div><div class="stat-l">Učenika</div></div>
+      <div class="stat-card"><div class="stat-v" id="s-results" style="color:var(--amber)">—</div><div class="stat-l">Predanih kvizova</div></div>
+      <div class="stat-card"><div class="stat-v" id="s-avg"     style="color:var(--teal)">—</div><div class="stat-l">Prosječan rezultat</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">📊 Pregled</button>
+      <button class="tab" data-tab="quizzes">📝 Kvizovi</button>
+      <button class="tab" data-tab="results">📈 Rezultati</button>
+      <button class="tab" data-tab="students">👥 Učenici</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="fade-up">
+      <div class="ov-grid">
+        <div class="card">
+          <div class="sec-title">Posljednji rezultati</div>
+          <div id="ov-results"></div>
+        </div>
+        <div class="card">
+          <div class="sec-title">Aktivni kvizovi</div>
+          <div class="mini-list" id="ov-active"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZZES -->
+    <div id="tab-quizzes" style="display:none">
+      <div class="qg" id="quizzes-grid"></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="tab-results" style="display:none">
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <div class="sec-title" style="margin:0">Svi rezultati</div>
+        </div>
+        <!-- Filters -->
+        <div class="filters">
+          <input  class="input"  id="r-search"  placeholder="🔍 Pretraži učenika..." oninput="filterResults()"/>
+          <select class="select" id="r-razred"  onchange="filterResults()"><option value="">Svi razredi</option></select>
+          <select class="select" id="r-predmet" onchange="filterResults()"><option value="">Svi predmeti</option></select>
+          <select class="select" id="r-grade"   onchange="filterResults()">
+            <option value="">Sve ocjene</option>
+            <option value="5">Odličan (5)</option>
+            <option value="4">Vrlo dobar (4)</option>
+            <option value="3">Dobar (3)</option>
+            <option value="2">Dovoljan (2)</option>
+            <option value="1">Nedovoljan (1)</option>
+          </select>
+          <select class="select" id="r-sort"    onchange="filterResults()">
+            <option value="date-desc">Najnoviji</option>
+            <option value="date-asc">Najstariji</option>
+            <option value="pct-desc">Najbolji rezultat</option>
+            <option value="pct-asc">Najlošiji rezultat</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto" id="results-wrap"></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px" id="results-count"></div>
+      </div>
+    </div>
+
+    <!-- STUDENTS -->
+    <div id="tab-students" style="display:none">
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <div class="sec-title" style="margin:0" id="students-title">Učenici</div>
+        </div>
+        <div class="filters">
+          <input  class="input"  id="s-search" placeholder="🔍 Pretraži..." oninput="filterStudents()"/>
+          <select class="select" id="s-razred" onchange="filterStudents()"><option value="">Svi razredi</option></select>
+          <select class="select" id="s-smjer"  onchange="filterStudents()"><option value="">Svi smjerovi</option></select>
+          <select class="select" id="s-sort"   onchange="filterStudents()">
+            <option value="name">Po imenu</option>
+            <option value="razred">Po razredu</option>
+            <option value="results-desc">Po broju kvizova</option>
+            <option value="grade-desc">Po prosječnoj ocjeni</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto" id="students-wrap"></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px" id="students-count"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm modal -->
+  <div class="modal-bg" id="modal" style="display:none">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">Potvrda</div>
+      <div id="modal-body" style="font-size:14px;color:var(--text2);line-height:1.6"></div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">Odustani</button>
+        <button class="btn btn-danger" id="modal-confirm">Potvrdi</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { toast, gradeBadge, fmtDate, pctColor } from '/js/utils.js';
+
+    let quizzes=[], results=[], users=[], allResults=[], allStudents=[];
+
+    onAuthStateChanged(auth, async (u) => {
+      if (!u) { window.location.href='/login'; return; }
+      const snap = await getDoc(doc(db,'users',u.uid));
+      if (snap.data()?.role !== 'admin') { window.location.href='/student'; return; }
+      document.getElementById('nb-email').textContent = u.email;
+      await loadAll();
+    });
+
+    document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        ['overview','quizzes','results','students'].forEach(t =>
+          document.getElementById('tab-'+t).style.display = btn.dataset.tab===t?'block':'none'
+        );
+      };
+    });
+
+    async function loadAll() {
+      try {
+        const [qs,rs,us] = await Promise.all([
+          getDocs(query(collection(db,'quizzes'), orderBy('createdAt','desc'))),
+          getDocs(query(collection(db,'results'),  orderBy('completedAt','desc'))),
+          getDocs(collection(db,'users'))
+        ]);
+        quizzes = qs.docs.map(d=>({id:d.id,...d.data()}));
+        results = rs.docs.map(d=>({id:d.id,...d.data()}));
+        users   = us.docs.map(d=>({id:d.id,...d.data()}));
+        allResults  = [...results];
+        allStudents = users.filter(u=>u.role==='student');
+
+        populateFilters();
+        renderStats();
+        renderOverview();
+        renderQuizzes();
+        renderResults(results);
+        renderStudents(allStudents);
+      } catch(e) { toast('Greška: '+e.message,'error'); }
+    }
+
+    function populateFilters() {
+      const razredi = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))].sort();
+      const smjerovi = [...new Set(allStudents.map(s=>s.smjer).filter(Boolean))].sort();
+      const predmeti = [...new Set(quizzes.map(q=>q.subject).filter(Boolean))].sort();
+
+      ['r-razred','s-razred'].forEach(id => {
+        const el = document.getElementById(id);
+        razredi.forEach(r => { const o=document.createElement('option'); o.value=r; o.textContent=r; el.appendChild(o); });
+      });
+      smjerovi.forEach(s => { const el=document.getElementById('s-smjer'); const o=document.createElement('option'); o.value=s; o.textContent=s; el.appendChild(o); });
+      predmeti.forEach(p => { const el=document.getElementById('r-predmet'); const o=document.createElement('option'); o.value=p; o.textContent=p; el.appendChild(o); });
+    }
+
+    function renderStats() {
+      const avg = results.length ? Math.round(results.reduce((s,r)=>s+(r.percentage||0),0)/results.length) : 0;
+      document.getElementById('s-quizzes').textContent  = quizzes.length;
+      document.getElementById('s-active').textContent   = quizzes.filter(q=>q.status==='active').length;
+      document.getElementById('s-students').textContent = allStudents.length;
+      document.getElementById('s-results').textContent  = results.length;
+      document.getElementById('s-avg').textContent      = avg+'%';
+    }
+
+    function renderOverview() {
+      const rEl = document.getElementById('ov-results');
+      if (!results.length) { rEl.innerHTML='<p style="color:var(--text3);font-size:13px;padding:12px 0">Nema rezultata</p>'; }
+      else rEl.innerHTML = `<div style="overflow-x:auto"><table class="tbl">
+        <thead><tr><th>Učenik</th><th>Razred</th><th>Kviz</th><th>%</th><th>Ocjena</th><th>Datum</th></tr></thead>
+        <tbody>${results.slice(0,8).map(r=>`<tr>
+          <td style="color:var(--text)">${r.studentName}</td>
+          <td>${r.razred||'—'}</td>
+          <td>${r.quizTitle}</td>
+          <td style="color:${pctColor(r.percentage)};font-weight:600">${r.percentage}%</td>
+          <td>${gradeBadge(r.grade,r.gradeLabel)}</td>
+          <td>${fmtDate(r.completedAt)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+
+      const aEl = document.getElementById('ov-active');
+      const active = quizzes.filter(q=>q.status==='active');
+      aEl.innerHTML = !active.length
+        ? '<p style="color:var(--text3);font-size:13px;padding:8px 0">Nema aktivnih kvizova</p>'
+        : active.map(q=>`<div class="mini-item">
+            <div><div class="mini-name">${q.title}</div><div class="mini-sub">${q.numQuestions} pit. · ${q.difficulty}</div></div>
+            <span class="badge badge-green">● Aktivan</span>
+          </div>`).join('');
+    }
+
+    function renderQuizzes() {
+      const grid = document.getElementById('quizzes-grid');
+      if (!quizzes.length) { grid.innerHTML=`<div class="card empty" style="grid-column:1/-1"><div class="empty-icon">📝</div><h3>Nema kvizova</h3><p>Kreirajte prvi kviz</p><a href="/create-quiz" class="btn btn-primary" style="margin-top:8px">✨ Novi kviz</a></div>`; return; }
+      grid.innerHTML = quizzes.map(q=>`
+        <div class="card qc">
+          <div class="qc-top">
+            <div><div class="qc-title">${q.title}</div><div class="qc-desc">${q.description||''}</div></div>
+            <span class="badge ${q.status==='active'?'badge-green':'badge-amber'}">${q.status==='active'?'● Aktivan':'○ Neaktivan'}</span>
+          </div>
+          <div class="qc-meta">
+            <span class="chip">📚 ${q.subject||'—'}</span>
+            <span class="chip">❓ ${q.numQuestions} pit.</span>
+            <span class="chip">⚡ ${q.difficulty}</span>
+            ${q.timeLimit?`<span class="chip">⏱ ${q.timeLimit} min</span>`:''}
+          </div>
+          <div class="qc-foot">
+            <button class="btn btn-sm ${q.status==='active'?'btn-amber':'btn-success'}" onclick="toggleStatus('${q.id}','${q.status}')">
+              ${q.status==='active'?'⏸ Deaktiviraj':'▶ Aktiviraj'}
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?mode=quiz-preview&id=${q.id}'">👁 Pregled</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati kviz?','Ova akcija je nepovratna. Svi rezultati za ovaj kviz ostaju.',()=>delQuiz('${q.id}'))">🗑</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── Results with filters ──
+    window.filterResults = () => {
+      const search  = document.getElementById('r-search').value.toLowerCase();
+      const razred  = document.getElementById('r-razred').value;
+      const predmet = document.getElementById('r-predmet').value;
+      const grade   = document.getElementById('r-grade').value;
+      const sort    = document.getElementById('r-sort').value;
+
+      let filtered = allResults.filter(r => {
+        const student = users.find(u=>u.id===r.userId);
+        const studentRazred = student?.razred || r.razred || '';
+        if (search  && !r.studentName.toLowerCase().includes(search) && !r.quizTitle.toLowerCase().includes(search)) return false;
+        if (razred  && studentRazred !== razred) return false;
+        if (predmet && r.quizSubject !== predmet && !r.quizTitle.toLowerCase().includes(predmet.toLowerCase())) return false;
+        if (grade   && String(r.grade) !== grade) return false;
+        return true;
+      });
+
+      if (sort==='pct-desc') filtered.sort((a,b)=>b.percentage-a.percentage);
+      else if (sort==='pct-asc') filtered.sort((a,b)=>a.percentage-b.percentage);
+      else if (sort==='date-asc') filtered.sort((a,b)=>new Date(a.completedAt)-new Date(b.completedAt));
+      else filtered.sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt));
+
+      renderResults(filtered);
+    };
+
+    function renderResults(list) {
+      const wrap = document.getElementById('results-wrap');
+      document.getElementById('results-count').textContent = `Prikazano: ${list.length} rezultata`;
+      if (!list.length) { wrap.innerHTML='<p style="color:var(--text3);font-size:13.5px;padding:20px 0;text-align:center">Nema rezultata za odabrane filtere</p>'; return; }
+      const studentMap = {};
+      users.forEach(u=>studentMap[u.id]=u);
+
+      wrap.innerHTML = `<table class="tbl">
+        <thead><tr><th>Učenik</th><th>Razred</th><th>Kviz</th><th>Bodovi</th><th>%</th><th>Ocjena</th><th>Datum</th><th></th></tr></thead>
+        <tbody>${list.map(r=>{
+          const st = studentMap[r.userId];
+          const razred = st?.razred || r.razred || '—';
+          return `<tr>
+            <td style="color:var(--text);font-weight:500">${r.studentName}</td>
+            <td><span class="badge badge-teal">${razred}</span></td>
+            <td>${r.quizTitle}</td>
+            <td style="font-family:var(--fm);font-size:12px">${r.earnedPoints}/${r.totalPoints}</td>
+            <td style="color:${pctColor(r.percentage)};font-weight:600">${r.percentage}%</td>
+            <td>${gradeBadge(r.grade,r.gradeLabel)}</td>
+            <td>${fmtDate(r.completedAt)}</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?id=${r.id}'">Detalji</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+
+    // ── Students with filters ──
+    window.filterStudents = () => {
+      const search = document.getElementById('s-search').value.toLowerCase();
+      const razred = document.getElementById('s-razred').value;
+      const smjer  = document.getElementById('s-smjer').value;
+      const sort   = document.getElementById('s-sort').value;
+
+      let filtered = allStudents.filter(s => {
+        if (search && !s.displayName?.toLowerCase().includes(search) && !s.email?.toLowerCase().includes(search)) return false;
+        if (razred && s.razred !== razred) return false;
+        if (smjer  && s.smjer  !== smjer)  return false;
+        return true;
+      });
+
+      const studentResults = (id) => results.filter(r=>r.userId===id);
+
+      if (sort==='razred') filtered.sort((a,b)=>(a.razred||'').localeCompare(b.razred||''));
+      else if (sort==='results-desc') filtered.sort((a,b)=>studentResults(b.id).length - studentResults(a.id).length);
+      else if (sort==='grade-desc') {
+        filtered.sort((a,b) => {
+          const ag = studentResults(a.id), bg = studentResults(b.id);
+          const aa = ag.length ? ag.reduce((s,r)=>s+r.grade,0)/ag.length : 0;
+          const ba = bg.length ? bg.reduce((s,r)=>s+r.grade,0)/bg.length : 0;
+          return ba-aa;
+        });
+      } else filtered.sort((a,b)=>a.displayName?.localeCompare(b.displayName));
+
+      document.getElementById('students-title').textContent = `Učenici (${filtered.length})`;
+      document.getElementById('students-count').textContent = `Prikazano: ${filtered.length} učenika`;
+      renderStudents(filtered);
+    };
+
+    function renderStudents(list) {
+      const wrap = document.getElementById('students-wrap');
+      if (!list.length) { wrap.innerHTML='<p style="color:var(--text3);font-size:13.5px;padding:20px 0;text-align:center">Nema učenika za odabrane filtere</p>'; return; }
+      wrap.innerHTML = `<table class="tbl">
+        <thead><tr><th>Ime</th><th>Razred</th><th>Smjer</th><th>Email</th><th>Kvizova</th><th>Prosj. ocjena</th><th>Registrovan</th><th></th></tr></thead>
+        <tbody>${list.map(s=>{
+          const sr  = results.filter(r=>r.userId===s.id);
+          const avg = sr.length?(sr.reduce((sum,r)=>sum+r.grade,0)/sr.length).toFixed(1):'—';
+          return `<tr>
+            <td style="color:var(--text);font-weight:500">${s.displayName||'—'}</td>
+            <td><span class="badge badge-teal">${s.razred||'—'}</span></td>
+            <td style="color:var(--text2)">${s.smjer||'—'}</td>
+            <td>${s.email}</td>
+            <td><span class="badge badge-blue">${sr.length}</span></td>
+            <td style="color:var(--amber);font-weight:600">${avg}</td>
+            <td>${fmtDate(s.createdAt)}</td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-teal btn-sm" onclick="allowRetry('${s.id}','${s.displayName}')">🔄 Dozvoli ponavljanje</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati učenika?','Obrisat ćete korisnika <strong>${s.displayName}</strong> (${s.email}). Njegovi rezultati ostaju.',()=>deleteStudent('${s.id}'))">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+
+    // ── Actions ──
+    window.toggleStatus = async (id, current) => {
+      const ns = current==='active'?'inactive':'active';
+      await updateDoc(doc(db,'quizzes',id),{status:ns});
+      toast(ns==='active'?'Kviz aktiviran!':'Kviz deaktiviran','success');
+      await loadAll();
+    };
+
+    window.delQuiz = async (id) => {
+      await deleteDoc(doc(db,'quizzes',id));
+      toast('Kviz obrisan','success');
+      await loadAll();
+    };
+
+    window.deleteStudent = async (uid) => {
+      await deleteDoc(doc(db,'users',uid));
+      toast('Učenik obrisan','success');
+      await loadAll();
+    };
+
+    window.allowRetry = async (uid, name) => {
+      // Get all quizzes
+      const qSnap = await getDocs(query(collection(db,'quizzes')));
+      const quizList = qSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+      // Show quiz selection modal
+      document.getElementById('modal-title').textContent = `Dozvoli ponavljanje — ${name}`;
+      document.getElementById('modal-body').innerHTML = `
+        <p style="margin-bottom:14px">Odaberite kviz koji učenik može ponovo riješiti:</p>
+        <select class="select" id="retry-quiz-select">
+          <option value="">— Odaberite kviz —</option>
+          ${quizList.map(q=>`<option value="${q.id}">${q.title}</option>`).join('')}
+        </select>`;
+      document.getElementById('modal-confirm').textContent = 'Dozvoli';
+      document.getElementById('modal-confirm').className  = 'btn btn-success';
+      document.getElementById('modal-confirm').onclick = async () => {
+        const qid = document.getElementById('retry-quiz-select').value;
+        if (!qid) { toast('Odaberite kviz','error'); return; }
+        // Delete that student's result for this quiz
+        const rSnap = await getDocs(collection(db,'results'));
+        const toDelete = rSnap.docs.filter(d=>d.data().userId===uid && d.data().quizId===qid);
+        await Promise.all(toDelete.map(d=>deleteDoc(doc(db,'results',d.id))));
+        toast(`Dozvoljeno ponavljanje kviza za ${name}`,'success');
+        closeModal();
+        await loadAll();
+      };
+      document.getElementById('modal').style.display = 'flex';
+    };
+
+    // ── Modal helpers ──
+    window.confirmAction = (title, body, onConfirm) => {
+      document.getElementById('modal-title').textContent  = title;
+      document.getElementById('modal-body').innerHTML     = body;
+      document.getElementById('modal-confirm').textContent = 'Potvrdi';
+      document.getElementById('modal-confirm').className  = 'btn btn-danger';
+      document.getElementById('modal-confirm').onclick    = () => { onConfirm(); closeModal(); };
+      document.getElementById('modal').style.display      = 'flex';
+    };
+    window.closeModal = () => document.getElementById('modal').style.display = 'none';
+    document.getElementById('modal').onclick = (e) => { if (e.target===document.getElementById('modal')) closeModal(); };
+  </script>
+</body>
+</html>

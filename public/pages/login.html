@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KvizMajstor — Prijava</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+    body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image: linear-gradient(rgba(91,127,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(91,127,255,.025) 1px, transparent 1px); background-size:56px 56px; }
+    .glow { position:fixed; border-radius:50%; filter:blur(120px); opacity:.06; pointer-events:none; }
+    .g1   { width:480px; height:480px; background:var(--accent); top:-160px; left:-160px; }
+    .g2   { width:380px; height:380px; background:var(--purple); bottom:-120px; right:-120px; }
+    .box  { background:var(--bg2); border:1px solid var(--border); border-radius:20px; padding:40px 36px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.35); position:relative; z-index:1; animation:fadeUp .4s ease; }
+    .logo { text-align:center; margin-bottom:28px; }
+    .logo-icon { font-size:36px; display:block; margin-bottom:10px; }
+    .logo h1   { font-family:var(--fd); font-size:26px; font-weight:700; letter-spacing:-.02em; margin-bottom:4px; }
+    .logo p    { font-size:13px; color:var(--text3); }
+    .tab-row   { display:flex; background:var(--bg3); border-radius:var(--r); padding:3px; margin-bottom:22px; gap:3px; }
+    .tl        { flex:1; padding:8px; border:none; border-radius:8px; font-family:var(--fb); font-size:13.5px; font-weight:500; cursor:pointer; background:transparent; color:var(--text3); transition:all var(--t); }
+    .tl.on     { background:var(--bg2); color:var(--text); box-shadow:0 1px 6px rgba(0,0,0,.3); }
+    .verify-box { text-align:center; padding:16px 0 8px; }
+    .verify-icon { font-size:52px; margin-bottom:14px; }
+    .verify-title { font-family:var(--fd); font-size:20px; font-weight:600; margin-bottom:8px; }
+    .verify-desc  { font-size:13.5px; color:var(--text2); line-height:1.7; margin-bottom:20px; }
+    #reg-fields, #verify-screen { display:none; }
+  </style>
+</head>
+<body>
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+  <div class="box">
+    <div class="logo">
+      <span class="logo-icon">📚</span>
+      <h1>KvizMajstor</h1>
+      <p>AI platforma za testiranje učenika</p>
+    </div>
+    <div class="tab-row">
+      <button class="tl on" onclick="switchMode('login')">Prijava</button>
+      <button class="tl"    onclick="switchMode('register')">Registracija</button>
+    </div>
+    <form id="form">
+      <div id="reg-fields">
+        <div class="fg">
+          <label>Ime i prezime</label>
+          <input class="input" id="name" type="text" placeholder="Npr. Amra Hodžić"/>
+        </div>
+        <div class="row2">
+          <div class="fg">
+            <label>Razred</label>
+            <select class="select" id="razred">
+              <option value="">— Odaberi —</option>
+              <option>I-1</option><option>I-2</option><option>I-3</option><option>I-4</option>
+              <option>II-1</option><option>II-2</option><option>II-3</option><option>II-4</option>
+              <option>III-1</option><option>III-2</option><option>III-3</option><option>III-4</option>
+              <option>IV-1</option><option>IV-2</option><option>IV-3</option><option>IV-4</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Smjer / Profil</label>
+            <input class="input" id="smjer" placeholder="Npr. Elektrotehničar"/>
+          </div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Email adresa</label>
+        <input class="input" id="email" type="email" placeholder="vas@email.com" required/>
+      </div>
+      <div class="fg">
+        <label>Lozinka</label>
+        <input class="input" id="password" type="password" placeholder="••••••••" required/>
+      </div>
+      <div class="info-box" id="reg-info" style="display:none; margin-bottom:16px">
+        <span>ℹ️</span>
+        <span>Nakon registracije primit ćete verifikacijski email. Morate potvrditi email prije prijave.</span>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" type="submit" id="submit-btn">Prijavi se</button>
+    </form>
+    <div id="verify-screen">
+      <div class="verify-box">
+        <div class="verify-icon">📬</div>
+        <div class="verify-title">Provjerite vaš email</div>
+        <div class="verify-desc">
+          Poslali smo verifikacijski link na<br>
+          <strong id="verify-email" style="color:var(--text)"></strong><br><br>
+          Kliknite na link u emailu, zatim se prijavite ovdje.
+        </div>
+        <button class="btn btn-ghost btn-full" id="resend-btn">↺ Pošalji ponovo</button>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="switchMode('login')">← Nazad na prijavu</button>
+      </div>
+    </div>
+  </div>
+  <script type="module">
+    import { auth, db } from '/js/firebase-config.js';
+    import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { toast, btnLoad, btnReset } from '/js/utils.js';
+
+    let mode = 'login';
+
+    window.switchMode = (m) => {
+      mode = m;
+      document.querySelectorAll('.tl').forEach((t,i) => t.classList.toggle('on', (i===0&&m==='login')||(i===1&&m==='register')));
+      document.getElementById('reg-fields').style.display    = m==='register'?'block':'none';
+      document.getElementById('reg-info').style.display      = m==='register'?'flex':'none';
+      document.getElementById('form').style.display          = 'block';
+      document.getElementById('verify-screen').style.display = 'none';
+      document.getElementById('submit-btn').textContent      = m==='login'?'Prijavi se':'Kreiraj račun';
+    };
+
+    const errMap = {
+      'auth/user-not-found':'Korisnik nije pronađen',
+      'auth/wrong-password':'Pogrešna lozinka',
+      'auth/invalid-credential':'Pogrešni podaci za prijavu',
+      'auth/email-already-in-use':'Email već postoji',
+      'auth/weak-password':'Lozinka mora imati min. 6 znakova',
+      'auth/invalid-email':'Nevažeći email format',
+      'auth/too-many-requests':'Previše pokušaja. Pokušajte za nekoliko minuta.',
+    };
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById('submit-btn');
+      const email = document.getElementById('email').value.trim();
+      const pass  = document.getElementById('password').value;
+      btnLoad(btn);
+      try {
+        if (mode === 'login') {
+          const cred = await signInWithEmailAndPassword(auth, email, pass);
+          if (!cred.user.emailVerified) {
+            await signOut(auth);
+            toast('Email nije potvrđen. Provjerite inbox i kliknite na link.', 'error', 5000);
+            btnReset(btn); return;
+          }
+          const snap = await getDoc(doc(db, 'users', cred.user.uid));
+          const role = snap.data()?.role || 'student';
+          window.location.href = role === 'admin' ? '/admin' : '/student';
+        } else {
+          const name   = document.getElementById('name').value.trim();
+          const razred = document.getElementById('razred').value;
+          const smjer  = document.getElementById('smjer').value.trim();
+          if (!name)   { toast('Unesite ime i prezime', 'error'); btnReset(btn); return; }
+          if (!razred) { toast('Odaberite razred', 'error'); btnReset(btn); return; }
+          const cred = await createUserWithEmailAndPassword(auth, email, pass);
+          await sendEmailVerification(cred.user);
+          await setDoc(doc(db, 'users', cred.user.uid), {
+            email, displayName: name, razred, smjer: smjer||'',
+            role: 'student', createdAt: new Date().toISOString()
+          });
+          await signOut(auth);
+          document.getElementById('form').style.display          = 'none';
+          document.getElementById('verify-screen').style.display = 'block';
+          document.getElementById('verify-email').textContent    = email;
+        }
+      } catch (err) {
+        toast(errMap[err.code] || 'Greška: ' + err.message, 'error');
+        btnReset(btn);
+      }
+    });
+
+    document.getElementById('resend-btn').onclick = async () => {
+      try {
+        const email = document.getElementById('email').value.trim();
+        const pass  = document.getElementById('password').value;
+        const cred  = await signInWithEmailAndPassword(auth, email, pass);
+        await sendEmailVerification(cred.user);
+        await signOut(auth);
+        toast('Verifikacijski email poslan!', 'success');
+      } catch { toast('Greška pri slanju emaila', 'error'); }
+    };
+  </script>
+</body>
+</html>
