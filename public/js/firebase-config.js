@@ -1,12 +1,13 @@
 // ─── FIREBASE CONFIG ─────────────────────────────────────────────────────────
 // Zamijeni ove vrijednosti s tvojim Firebase config podacima!
 const firebaseConfig = {
-  apiKey:            "TVOJ_API_KEY",
-  authDomain:        "TVOJ_PROJECT.firebaseapp.com",
-  projectId:         "TVOJ_PROJECT_ID",
-  storageBucket:     "TVOJ_PROJECT.appspot.com",
-  messagingSenderId: "TVOJ_SENDER_ID",
-  appId:             "TVOJ_APP_ID"
+  apiKey: "AIzaSyDeWgrG5ulkp5VmqioCKkDGyOmEY1d7gzA",
+  authDomain: "kviz-13f52.firebaseapp.com",
+  projectId: "kviz-13f52",
+  storageBucket: "kviz-13f52.firebasestorage.app",
+  messagingSenderId: "138433175415",
+  appId: "1:138433175415:web:3173d13a6b35025174cb72",
+  measurementId: "G-8CY3P68KM8"
 };
 
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
