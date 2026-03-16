@@ -109,6 +109,7 @@
       document.getElementById('form').style.display          = 'block';
       document.getElementById('verify-screen').style.display = 'none';
       document.getElementById('submit-btn').textContent      = m==='login'?'Prijavi se':'Kreiraj račun';
+      document.getElementById('reset-btn').style.display = m === 'login' ? 'block' : 'none';
     };
 
     const errMap = {
