@@ -74,13 +74,22 @@
         <div class="stat-card"><div class="stat-v" id="rs-empty"   style="color:var(--amber)">-</div><div class="stat-l">Bez odgovora</div></div>
       </div>
 
-      <!-- Answers -->
+     <!-- Answers -->
       <div id="answers-section" style="margin-top:20px; display:none">
         <div class="expl-toggle">
           <div class="sec-title">Pregled odgovora</div>
           <button class="btn btn-ghost btn-sm" id="toggle-expl">Pokaži objašnjenja</button>
         </div>
         <div class="ans-list" id="ans-list"></div>
+      </div>
+
+      <!-- Zaključani rezultati -->
+      <div id="results-locked-msg" style="display:none; margin-top:20px" class="card">
+        <div style="text-align:center; padding:32px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+          <div style="font-size:40px">🔒</div>
+          <div style="font-family:var(--fd); font-size:18px; font-weight:600">Pregled odgovora nije dostupan</div>
+          <div style="font-size:13.5px; color:var(--text2)">Nastavnik još nije omogućio pregled tačnih odgovora.</div>
+        </div>
       </div>
 
       <!-- Actions -->
