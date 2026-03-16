@@ -21,6 +21,14 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault();
   }
 });
+// F12
+if (e.key === 'F12') {
+  e.preventDefault();
+}
+// Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+  e.preventDefault();
+}
 
 // 5. Print Screen detekcija
 document.addEventListener('keyup', function(e) {
