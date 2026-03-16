@@ -161,11 +161,7 @@
       }
 
       // Show retry if student owns it
-      if (result.quizId) {
-        const retryBtn = document.getElementById('act-retry');
-        retryBtn.style.display = 'inline-flex';
-        retryBtn.onclick = () => { sessionStorage.setItem('quizId', result.quizId); window.location.href = '/take-quiz?id=' + result.quizId; };
-      }
+     
 
       document.getElementById('phase-loading').style.display = 'none';
       document.getElementById('phase-result').style.display  = 'block';
