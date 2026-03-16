@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KvizMajstor — Kviz</title>
   <link rel="stylesheet" href="/css/style.css"/>
+  <script src="/js/protection.js" defer></script>
   <style>
     /* Intro */
     #phase-intro { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
@@ -154,6 +155,7 @@
   }
 
   document.getElementById('start-btn').onclick = () => {
+    window._quizActive = true; // Aktiviraj zaštitu
     document.getElementById('phase-intro').style.display = 'none';
     document.getElementById('phase-quiz').style.display  = 'block';
     document.getElementById('qtb-title').textContent = quiz.title;
@@ -216,7 +218,8 @@
     timerRef = setInterval(() => {
       timeLeft--;
       updateTimerUI();
-      if (timeLeft <= 0) { clearInterval(timerRef); submitQuiz(); }
+      if (timeLeft <= 0) { clearInterval(timerRef);
+    window._quizActive = false; // Deaktiviraj zaštitu submitQuiz(); }
     }, 1000);
   }
 
@@ -228,8 +231,12 @@
     el.className = 'qtb-timer' + (timeLeft<60?' timer-urg':timeLeft<300?' timer-warn':'');
   }
 
+  // Auto-submit kada učenik napusti tab 3 puta
+  window.autoSubmitQuiz = submitQuiz;
+
   async function submitQuiz() {
     clearInterval(timerRef);
+    window._quizActive = false; // Deaktiviraj zaštitu
     document.getElementById('phase-quiz').style.display = 'none';
     document.getElementById('phase-loading').style.display = 'flex';
     document.getElementById('load-msg').textContent = 'AI ocjenjuje vaše odgovore...';
