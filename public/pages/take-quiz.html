@@ -272,6 +272,7 @@
         quizSubject: quiz.subject || '',
         razred: uData ? (uData.razred || '') : '',
         smjer: uData ? (uData.smjer || '') : '',
+        showResults: quiz.showResults || 'always',  // ← dodaj ovo
         completedAt: new Date().toISOString()
       };
 
