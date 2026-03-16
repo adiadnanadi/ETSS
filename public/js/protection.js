@@ -1,87 +1,90 @@
 // ─── ZAŠTITA KVIZA ────────────────────────────────────────────────────────────
 
 // 1. Onemogući desni klik
-document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
-// 2. Onemogući kopiranje teksta
-document.addEventListener('copy',  e => e.preventDefault());
-document.addEventListener('cut',   e => e.preventDefault());
-document.addEventListener('paste', e => e.preventDefault());
+// 2. Onemogući kopiranje
+document.addEventListener('copy',  function(e) { e.preventDefault(); });
+document.addEventListener('cut',   function(e) { e.preventDefault(); });
 
-// 3. Onemogući označavanje teksta CSS-om
-document.body.style.userSelect    = 'none';
+// 3. Onemogući označavanje teksta
+document.body.style.userSelect       = 'none';
 document.body.style.webkitUserSelect = 'none';
+document.body.style.msUserSelect     = 'none';
 
-// 4. Onemogući keyboard shortcuts za kopiranje i DevTools
-document.addEventListener('keydown', e => {
-  // Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A, Ctrl+S, Ctrl+P
-  if (e.ctrlKey && ['c','x','v','a','s','p','u'].includes(e.key.toLowerCase())) {
+// 4. Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  var key = e.key.toLowerCase();
+
+  // Ctrl+C, Ctrl+X, Ctrl+A, Ctrl+S, Ctrl+P, Ctrl+U
+  if (e.ctrlKey && (key === 'c' || key === 'x' || key === 'a' || key === 's' || key === 'p' || key === 'u')) {
     e.preventDefault();
   }
-
-  // Ctrl+U - View source
-  if (e.ctrlKey && e.key.toLowerCase() === 'u') e.preventDefault();
 });
 
-// 5. Screenshot detekcija — detektuje Print Screen
-document.addEventListener('keyup', e => {
+// 5. Print Screen detekcija
+document.addEventListener('keyup', function(e) {
   if (e.key === 'PrintScreen') {
-    // Privremeno sakrij sadržaj
     document.body.style.filter = 'blur(10px)';
-    setTimeout(() => document.body.style.filter = '', 2000);
-    showWarning('⚠️ Screenshot je onemogućen tokom kviza!');
+    setTimeout(function() { document.body.style.filter = ''; }, 2000);
+    showQuizWarning('Screenshot je onemogućen tokom kviza!');
   }
 });
 
-// 6. Detekcija kada učenik napusti tab/prozor
-let warningCount = 0;
-const MAX_WARNINGS = 3;
+// 6. Tab switch detekcija
+var warningCount = 0;
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && window._quizActive) {
+document.addEventListener('visibilitychange', function() {
+  if (!window._quizActive) return;
+
+  if (document.hidden) {
     warningCount++;
-    if (warningCount >= MAX_WARNINGS) {
-      showWarning(`🚫 Napustili ste kviz ${MAX_WARNINGS} puta! Kviz će biti automatski predан.`);
-      setTimeout(() => {
-        if (window.autoSubmitQuiz) window.autoSubmitQuiz();
+    window._tabSwitches = warningCount;
+
+    if (warningCount >= 3) {
+      showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.');
+      setTimeout(function() {
+        if (typeof window.autoSubmitQuiz === 'function') {
+          window.autoSubmitQuiz();
+        }
       }, 3000);
-    } else {
-      // Zapamti za log
-      window._tabSwitches = (window._tabSwitches || 0) + 1;
     }
-  } else if (!document.hidden && window._quizActive && warningCount < MAX_WARNINGS) {
-    showWarning(`⚠️ Upozorenje ${warningCount}/${MAX_WARNINGS}: Ne napuštajte kviz tokom rješavanja!`);
+  } else {
+    if (warningCount > 0 && warningCount < 3) {
+      showQuizWarning('Upozorenje ' + warningCount + '/3 — Ne napuštajte kviz tokom rješavanja!');
+    }
   }
 });
 
-// 7. Detekcija fullscreen izlaska (opcionalno)
-document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement && window._quizActive) {
-    showWarning('⚠️ Preporučujemo rješavanje kviza u fullscreen modu.');
-  }
-});
-
-// ─── Warning toast ────────────────────────────────────────────────────────────
-function showWarning(msg) {
-  // Ukloni postojeće upozorenje
-  const old = document.getElementById('quiz-warning');
+// ─── Warning prikaz ───────────────────────────────────────────────────────────
+function showQuizWarning(msg) {
+  var old = document.getElementById('quiz-warning');
   if (old) old.remove();
 
-  const el = document.createElement('div');
+  var el = document.createElement('div');
   el.id = 'quiz-warning';
-  el.style.cssText = `
-    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-    background: rgba(232,104,90,.15); border: 1px solid rgba(232,104,90,.4);
-    color: #e8685a; padding: 12px 20px; border-radius: 10px;
-    font-size: 14px; font-weight: 500; z-index: 9999;
-    backdrop-filter: blur(12px); text-align: center;
-    animation: fadeUp .3s ease; max-width: 90vw;
-    font-family: 'Inter', sans-serif;
-  `;
-  el.textContent = msg;
+  el.style.position       = 'fixed';
+  el.style.top            = '70px';
+  el.style.left           = '50%';
+  el.style.transform      = 'translateX(-50%)';
+  el.style.background     = 'rgba(232,104,90,.15)';
+  el.style.border         = '1px solid rgba(232,104,90,.4)';
+  el.style.color          = '#e8685a';
+  el.style.padding        = '12px 20px';
+  el.style.borderRadius   = '10px';
+  el.style.fontSize       = '14px';
+  el.style.fontWeight     = '500';
+  el.style.zIndex         = '9999';
+  el.style.backdropFilter = 'blur(12px)';
+  el.style.textAlign      = 'center';
+  el.style.maxWidth       = '90vw';
+  el.style.fontFamily     = 'Inter, sans-serif';
+  el.textContent = '⚠️ ' + msg;
   document.body.appendChild(el);
-  setTimeout(() => el?.remove(), 4000);
+
+  setTimeout(function() {
+    if (el && el.parentNode) el.remove();
+  }, 4000);
 }
 
-// Eksportuj za korištenje u take-quiz.html
-window._showQuizWarning = showWarning;
+window._showQuizWarning = showQuizWarning;
