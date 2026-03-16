@@ -175,10 +175,10 @@ app.post('/api/grade', async (req, res) => {
 
     const pct = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const gradeInfo = [
-      { min: 90, grade: 5, label: 'Odličan' },
-      { min: 75, grade: 4, label: 'Vrlo dobar' },
-      { min: 60, grade: 3, label: 'Dobar' },
-      { min: 50, grade: 2, label: 'Dovoljan' },
+      { min: 84, grade: 5, label: 'Odličan' },
+      { min: 70, grade: 4, label: 'Vrlo dobar' },
+      { min: 54, grade: 3, label: 'Dobar' },
+      { min: 37, grade: 2, label: 'Dovoljan' },
       { min: 0,  grade: 1, label: 'Nedovoljan' }
     ].find(g => pct >= g.min);
 
