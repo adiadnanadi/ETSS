@@ -24,11 +24,29 @@
     .mini-item:last-child { border-bottom:none; }
     .mini-name { font-size:13.5px; font-weight:500; }
     .mini-sub  { font-size:12px; color:var(--text3); margin-top:1px; }
+
     /* Modal */
-    .modal-bg  { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(4px); animation:fadeUp .2s ease; }
+    .modal-bg  { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; z-index:100; backdrop-filter:blur(4px); animation:fadeUp .2s ease; }
     .modal     { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:28px; width:90%; max-width:480px; box-shadow:var(--shadow-lg); animation:fadeUp .25s ease; }
     .modal-title { font-family:var(--fd); font-size:18px; font-weight:600; margin-bottom:16px; }
     .modal-foot  { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+
+    /* Edit modal — wider */
+    .modal-lg  { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:28px; width:95%; max-width:780px; max-height:88vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:fadeUp .25s ease; }
+    .modal-lg::-webkit-scrollbar { width:5px; }
+    .modal-lg::-webkit-scrollbar-thumb { background:var(--border2); border-radius:10px; }
+
+    /* Question editor */
+    .qed       { display:flex; flex-direction:column; gap:12px; margin-top:16px; }
+    .qed-item  { background:var(--bg3); border:1px solid var(--border); border-radius:var(--r-lg); padding:16px; }
+    .qed-hdr   { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+    .qed-num   { font-family:var(--fm); font-size:12px; color:var(--text3); background:var(--bg2); padding:2px 8px; border-radius:6px; }
+    .qed-opts  { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .qed-opt   { display:flex; align-items:center; gap:8px; }
+    .qed-opt input[type="radio"] { accent-color:var(--accent); width:16px; height:16px; flex-shrink:0; cursor:pointer; }
+    .qed-opt .input { flex:1; }
+    .opt-lbl   { font-size:12px; color:var(--text3); width:20px; flex-shrink:0; font-family:var(--fm); }
+    .correct-hint { font-size:11px; color:var(--green); margin-top:4px; }
   </style>
 </head>
 <body>
@@ -49,7 +67,6 @@
       <a href="/create-quiz" class="btn btn-primary">✨ Novi kviz</a>
     </div>
 
-    <!-- Stats -->
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-v" id="s-quizzes" style="color:var(--accent)">—</div><div class="stat-l">Ukupno kvizova</div></div>
       <div class="stat-card"><div class="stat-v" id="s-active"  style="color:var(--green)">—</div><div class="stat-l">Aktivnih kvizova</div></div>
@@ -58,7 +75,6 @@
       <div class="stat-card"><div class="stat-v" id="s-avg"     style="color:var(--teal)">—</div><div class="stat-l">Prosječan rezultat</div></div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" data-tab="overview">📊 Pregled</button>
       <button class="tab" data-tab="quizzes">📝 Kvizovi</button>
@@ -88,10 +104,9 @@
     <!-- RESULTS -->
     <div id="tab-results" style="display:none">
       <div class="card">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
           <div class="sec-title" style="margin:0">Svi rezultati</div>
         </div>
-        <!-- Filters -->
         <div class="filters">
           <input  class="input"  id="r-search"  placeholder="🔍 Pretraži učenika..." oninput="filterResults()"/>
           <select class="select" id="r-razred"  onchange="filterResults()"><option value="">Svi razredi</option></select>
@@ -104,7 +119,7 @@
             <option value="2">Dovoljan (2)</option>
             <option value="1">Nedovoljan (1)</option>
           </select>
-          <select class="select" id="r-sort"    onchange="filterResults()">
+          <select class="select" id="r-sort" onchange="filterResults()">
             <option value="date-desc">Najnoviji</option>
             <option value="date-asc">Najstariji</option>
             <option value="pct-desc">Najbolji rezultat</option>
@@ -119,7 +134,7 @@
     <!-- STUDENTS -->
     <div id="tab-students" style="display:none">
       <div class="card">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
           <div class="sec-title" style="margin:0" id="students-title">Učenici</div>
         </div>
         <div class="filters">
@@ -139,7 +154,7 @@
     </div>
   </div>
 
-  <!-- Confirm modal -->
+  <!-- Confirm modal (small) -->
   <div class="modal-bg" id="modal" style="display:none">
     <div class="modal">
       <div class="modal-title" id="modal-title">Potvrda</div>
@@ -151,13 +166,72 @@
     </div>
   </div>
 
+  <!-- Edit quiz modal (large) -->
+  <div class="modal-bg" id="edit-modal" style="display:none">
+    <div class="modal-lg">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div class="modal-title" style="margin:0">✏️ Uredi kviz</div>
+        <button class="btn btn-ghost btn-sm" onclick="closeEditModal()">✕ Zatvori</button>
+      </div>
+
+      <!-- Basic info -->
+      <div class="row2">
+        <div class="fg">
+          <label>Naziv kviza</label>
+          <input class="input" id="eq-title" placeholder="Naziv kviza"/>
+        </div>
+        <div class="fg">
+          <label>Predmet</label>
+          <input class="input" id="eq-subject" placeholder="Npr. Autoelektrika"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Opis</label>
+        <input class="input" id="eq-desc" placeholder="Kratki opis kviza"/>
+      </div>
+      <div class="row3">
+        <div class="fg">
+          <label>Težina</label>
+          <select class="select" id="eq-difficulty">
+            <option value="lako">Lako</option>
+            <option value="srednje">Srednje</option>
+            <option value="teško">Teško</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Vremenski limit (min)</label>
+          <input class="input" id="eq-time" type="number" min="5" max="120"/>
+        </div>
+        <div class="fg">
+          <label>Tema</label>
+          <input class="input" id="eq-topic" placeholder="Tema / modul"/>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Questions editor -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="sec-title" style="margin:0">Pitanja</div>
+        <button class="btn btn-success btn-sm" onclick="addQuestion()">+ Dodaj pitanje</button>
+      </div>
+      <div class="qed" id="eq-questions"></div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeEditModal()">Odustani</button>
+        <button class="btn btn-primary" id="eq-save-btn" onclick="saveQuiz()">💾 Sačuvaj izmjene</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { auth, db } from '/js/firebase-config.js';
     import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy, addDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { toast, gradeBadge, fmtDate, pctColor } from '/js/utils.js';
+    import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { toast, gradeBadge, fmtDate, pctColor, btnLoad, btnReset } from '/js/utils.js';
 
     let quizzes=[], results=[], users=[], allResults=[], allStudents=[];
+    let editingQuiz = null; // kviz koji trenutno editujemo
 
     onAuthStateChanged(auth, async (u) => {
       if (!u) { window.location.href='/login'; return; }
@@ -169,7 +243,6 @@
 
     document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
 
-    // Tabs
     document.querySelectorAll('.tab').forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
@@ -192,7 +265,6 @@
         users   = us.docs.map(d=>({id:d.id,...d.data()}));
         allResults  = [...results];
         allStudents = users.filter(u=>u.role==='student');
-
         populateFilters();
         renderStats();
         renderOverview();
@@ -203,16 +275,21 @@
     }
 
     function populateFilters() {
-      const razredi = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))].sort();
+      const razredi  = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))].sort();
       const smjerovi = [...new Set(allStudents.map(s=>s.smjer).filter(Boolean))].sort();
       const predmeti = [...new Set(quizzes.map(q=>q.subject).filter(Boolean))].sort();
-
       ['r-razred','s-razred'].forEach(id => {
         const el = document.getElementById(id);
+        // Clear old options except first
+        while (el.options.length > 1) el.remove(1);
         razredi.forEach(r => { const o=document.createElement('option'); o.value=r; o.textContent=r; el.appendChild(o); });
       });
-      smjerovi.forEach(s => { const el=document.getElementById('s-smjer'); const o=document.createElement('option'); o.value=s; o.textContent=s; el.appendChild(o); });
-      predmeti.forEach(p => { const el=document.getElementById('r-predmet'); const o=document.createElement('option'); o.value=p; o.textContent=p; el.appendChild(o); });
+      const smjerEl = document.getElementById('s-smjer');
+      while (smjerEl.options.length > 1) smjerEl.remove(1);
+      smjerovi.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; smjerEl.appendChild(o); });
+      const predEl = document.getElementById('r-predmet');
+      while (predEl.options.length > 1) predEl.remove(1);
+      predmeti.forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; predEl.appendChild(o); });
     }
 
     function renderStats() {
@@ -251,7 +328,10 @@
 
     function renderQuizzes() {
       const grid = document.getElementById('quizzes-grid');
-      if (!quizzes.length) { grid.innerHTML=`<div class="card empty" style="grid-column:1/-1"><div class="empty-icon">📝</div><h3>Nema kvizova</h3><p>Kreirajte prvi kviz</p><a href="/create-quiz" class="btn btn-primary" style="margin-top:8px">✨ Novi kviz</a></div>`; return; }
+      if (!quizzes.length) {
+        grid.innerHTML=`<div class="card empty" style="grid-column:1/-1"><div class="empty-icon">📝</div><h3>Nema kvizova</h3><p>Kreirajte prvi kviz</p><a href="/create-quiz" class="btn btn-primary" style="margin-top:8px">✨ Novi kviz</a></div>`;
+        return;
+      }
       grid.innerHTML = quizzes.map(q=>`
         <div class="card qc">
           <div class="qc-top">
@@ -268,13 +348,164 @@
             <button class="btn btn-sm ${q.status==='active'?'btn-amber':'btn-success'}" onclick="toggleStatus('${q.id}','${q.status}')">
               ${q.status==='active'?'⏸ Deaktiviraj':'▶ Aktiviraj'}
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?mode=quiz-preview&id=${q.id}'">👁 Pregled</button>
-            <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati kviz?','Ova akcija je nepovratna. Svi rezultati za ovaj kviz ostaju.',()=>delQuiz('${q.id}'))">🗑</button>
+            <button class="btn btn-ghost btn-sm" onclick="openEditModal('${q.id}')">✏️ Uredi</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati kviz?','Ova akcija je nepovratna.',()=>delQuiz('${q.id}'))">🗑</button>
           </div>
         </div>`).join('');
     }
 
-    // ── Results with filters ──
+    // ── EDIT MODAL ────────────────────────────────────────────────────────────
+    window.openEditModal = (id) => {
+      editingQuiz = JSON.parse(JSON.stringify(quizzes.find(q=>q.id===id)));
+      if (!editingQuiz) return;
+
+      document.getElementById('eq-title').value      = editingQuiz.title || '';
+      document.getElementById('eq-subject').value    = editingQuiz.subject || '';
+      document.getElementById('eq-desc').value       = editingQuiz.description || '';
+      document.getElementById('eq-difficulty').value = editingQuiz.difficulty || 'srednje';
+      document.getElementById('eq-time').value       = editingQuiz.timeLimit || 30;
+      document.getElementById('eq-topic').value      = editingQuiz.topic || '';
+
+      renderEditQuestions();
+      document.getElementById('edit-modal').style.display = 'flex';
+    };
+
+    window.closeEditModal = () => {
+      document.getElementById('edit-modal').style.display = 'none';
+      editingQuiz = null;
+    };
+
+    function renderEditQuestions() {
+      const container = document.getElementById('eq-questions');
+      if (!editingQuiz?.questions?.length) {
+        container.innerHTML = '<p style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Nema pitanja</p>';
+        return;
+      }
+      const letters = ['A','B','C','D','E'];
+      container.innerHTML = editingQuiz.questions.map((q,qi)=>`
+        <div class="qed-item" id="qed-${qi}">
+          <div class="qed-hdr">
+            <span class="qed-num">#${qi+1}</span>
+            <span class="badge ${q.type==='true_false'?'badge-purple':'badge-blue'}" style="font-size:10px">${q.type==='true_false'?'T/N':'Višestruki'}</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--amber)">${q.points||1} bod</span>
+            <button class="btn btn-danger btn-sm" onclick="removeQuestion(${qi})" style="padding:3px 9px">🗑</button>
+          </div>
+
+          <div class="fg" style="margin-bottom:10px">
+            <label>Tekst pitanja</label>
+            <textarea class="textarea" style="min-height:60px" onchange="updateQ(${qi},'question',this.value)">${q.question||''}</textarea>
+          </div>
+
+          <label style="margin-bottom:8px">Opcije — klikni radio dugme pored tačnog odgovora</label>
+          <div class="qed-opts">
+            ${q.options.map((opt,oi)=>`
+              <div class="qed-opt">
+                <span class="opt-lbl">${letters[oi]||oi+1}</span>
+                <input type="radio" name="correct-${qi}" value="${opt.replace(/"/g,'&quot;')}"
+                  ${opt===q.correctAnswer?'checked':''}
+                  onchange="updateCorrect(${qi}, this.value)"/>
+                <input class="input" value="${opt.replace(/"/g,'&quot;')}"
+                  onchange="updateOption(${qi},${oi},this.value)"
+                  style="font-size:13px;padding:7px 11px"/>
+              </div>`).join('')}
+          </div>
+          <div class="correct-hint" id="correct-hint-${qi}">
+            ✓ Tačan odgovor: <strong>${q.correctAnswer||'—'}</strong>
+          </div>
+
+          <div class="fg" style="margin-top:10px;margin-bottom:0">
+            <label>Objašnjenje (opciono)</label>
+            <input class="input" style="font-size:13px" value="${(q.explanation||'').replace(/"/g,'&quot;')}"
+              onchange="updateQ(${qi},'explanation',this.value)" placeholder="Kratko objašnjenje tačnog odgovora"/>
+          </div>
+        </div>`).join('');
+    }
+
+    // Update helpers
+    window.updateQ = (qi, field, val) => {
+      if (editingQuiz?.questions?.[qi]) editingQuiz.questions[qi][field] = val;
+    };
+
+    window.updateOption = (qi, oi, val) => {
+      if (!editingQuiz?.questions?.[qi]) return;
+      const q = editingQuiz.questions[qi];
+      const oldVal = q.options[oi];
+      // If this was the correct answer, update correctAnswer too
+      if (q.correctAnswer === oldVal) {
+        q.correctAnswer = val;
+        document.getElementById('correct-hint-'+qi).innerHTML = `✓ Tačan odgovor: <strong>${val}</strong>`;
+        // Update radio value
+        const radios = document.querySelectorAll(`input[name="correct-${qi}"]`);
+        radios.forEach(r => { if (r.checked) r.value = val; });
+      }
+      q.options[oi] = val;
+    };
+
+    window.updateCorrect = (qi, val) => {
+      if (!editingQuiz?.questions?.[qi]) return;
+      editingQuiz.questions[qi].correctAnswer = val;
+      document.getElementById('correct-hint-'+qi).innerHTML = `✓ Tačan odgovor: <strong>${val}</strong>`;
+    };
+
+    window.removeQuestion = (qi) => {
+      editingQuiz.questions.splice(qi, 1);
+      renderEditQuestions();
+      toast('Pitanje uklonjeno','info');
+    };
+
+    window.addQuestion = () => {
+      editingQuiz.questions.push({
+        id: 'q'+(Date.now()),
+        type: 'multiple_choice',
+        question: '',
+        options: ['A) ', 'B) ', 'C) ', 'D) '],
+        correctAnswer: 'A) ',
+        explanation: '',
+        points: 1
+      });
+      renderEditQuestions();
+      // Scroll to bottom of modal
+      const modal = document.querySelector('.modal-lg');
+      setTimeout(() => modal.scrollTop = modal.scrollHeight, 100);
+    };
+
+    window.saveQuiz = async () => {
+      const btn = document.getElementById('eq-save-btn');
+      btnLoad(btn, 'Čuvanje...');
+
+      const title = document.getElementById('eq-title').value.trim();
+      if (!title) { toast('Unesite naziv kviza','error'); btnReset(btn); return; }
+
+      // Sync any unsaved textarea changes
+      editingQuiz.title       = title;
+      editingQuiz.subject     = document.getElementById('eq-subject').value.trim();
+      editingQuiz.description = document.getElementById('eq-desc').value.trim();
+      editingQuiz.difficulty  = document.getElementById('eq-difficulty').value;
+      editingQuiz.timeLimit   = +document.getElementById('eq-time').value || 30;
+      editingQuiz.topic       = document.getElementById('eq-topic').value.trim();
+      editingQuiz.numQuestions = editingQuiz.questions.length;
+      editingQuiz.totalPoints  = editingQuiz.questions.reduce((s,q)=>s+(q.points||1),0);
+
+      // Validate
+      for (let i=0; i<editingQuiz.questions.length; i++) {
+        const q = editingQuiz.questions[i];
+        if (!q.question.trim()) { toast(`Pitanje #${i+1} nema tekst`,'error'); btnReset(btn); return; }
+        if (!q.correctAnswer)   { toast(`Pitanje #${i+1} nema tačan odgovor`,'error'); btnReset(btn); return; }
+      }
+
+      try {
+        const { id, ...data } = editingQuiz;
+        await updateDoc(doc(db,'quizzes',id), data);
+        toast('Kviz sačuvan!','success');
+        closeEditModal();
+        await loadAll();
+      } catch(e) {
+        toast('Greška: '+e.message,'error');
+        btnReset(btn);
+      }
+    };
+
+    // ── Results filters ──
     window.filterResults = () => {
       const search  = document.getElementById('r-search').value.toLowerCase();
       const razred  = document.getElementById('r-razred').value;
@@ -321,15 +552,15 @@
             <td>${gradeBadge(r.grade,r.gradeLabel)}</td>
             <td>${fmtDate(r.completedAt)}</td>
             <td style="display:flex;gap:6px">
-  <button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?id=${r.id}'">Detalji</button>
-  <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati rezultat?','Briše se rezultat učenika <strong>${r.studentName}</strong> za kviz <strong>${r.quizTitle}</strong>.',()=>deleteResult('${r.id}'))">🗑</button>
-</td>
+              <button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?id=${r.id}'">Detalji</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati rezultat?','Briše se rezultat učenika <strong>${r.studentName}</strong>.',()=>deleteResult('${r.id}'))">🗑</button>
+            </td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
     }
 
-    // ── Students with filters ──
+    // ── Students filters ──
     window.filterStudents = () => {
       const search = document.getElementById('s-search').value.toLowerCase();
       const razred = document.getElementById('s-razred').value;
@@ -346,12 +577,12 @@
       const studentResults = (id) => results.filter(r=>r.userId===id);
 
       if (sort==='razred') filtered.sort((a,b)=>(a.razred||'').localeCompare(b.razred||''));
-      else if (sort==='results-desc') filtered.sort((a,b)=>studentResults(b.id).length - studentResults(a.id).length);
+      else if (sort==='results-desc') filtered.sort((a,b)=>studentResults(b.id).length-studentResults(a.id).length);
       else if (sort==='grade-desc') {
-        filtered.sort((a,b) => {
-          const ag = studentResults(a.id), bg = studentResults(b.id);
-          const aa = ag.length ? ag.reduce((s,r)=>s+r.grade,0)/ag.length : 0;
-          const ba = bg.length ? bg.reduce((s,r)=>s+r.grade,0)/bg.length : 0;
+        filtered.sort((a,b)=>{
+          const ag=studentResults(a.id), bg=studentResults(b.id);
+          const aa=ag.length?ag.reduce((s,r)=>s+r.grade,0)/ag.length:0;
+          const ba=bg.length?bg.reduce((s,r)=>s+r.grade,0)/bg.length:0;
           return ba-aa;
         });
       } else filtered.sort((a,b)=>a.displayName?.localeCompare(b.displayName));
@@ -378,8 +609,8 @@
             <td style="color:var(--amber);font-weight:600">${avg}</td>
             <td>${fmtDate(s.createdAt)}</td>
             <td style="display:flex;gap:6px">
-              <button class="btn btn-teal btn-sm" onclick="allowRetry('${s.id}','${s.displayName}')">🔄 Dozvoli ponavljanje</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati učenika?','Obrisat ćete korisnika <strong>${s.displayName}</strong> (${s.email}). Njegovi rezultati ostaju.',()=>deleteStudent('${s.id}'))">🗑</button>
+              <button class="btn btn-teal btn-sm" onclick="allowRetry('${s.id}','${s.displayName}')">🔄 Ponovi</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmAction('Obrisati učenika?','Obrisat ćete korisnika <strong>${s.displayName}</strong>. Rezultati ostaju.',()=>deleteStudent('${s.id}'))">🗑</button>
             </td>
           </tr>`;
         }).join('')}</tbody>
@@ -393,15 +624,16 @@
       toast(ns==='active'?'Kviz aktiviran!':'Kviz deaktiviran','success');
       await loadAll();
     };
-    window.deleteResult = async (id) => {
-  await deleteDoc(doc(db, 'results', id));
-  toast('Rezultat obrisan', 'success');
-  await loadAll();
-};
 
     window.delQuiz = async (id) => {
       await deleteDoc(doc(db,'quizzes',id));
       toast('Kviz obrisan','success');
+      await loadAll();
+    };
+
+    window.deleteResult = async (id) => {
+      await deleteDoc(doc(db,'results',id));
+      toast('Rezultat obrisan','success');
       await loadAll();
     };
 
@@ -412,11 +644,8 @@
     };
 
     window.allowRetry = async (uid, name) => {
-      // Get all quizzes
       const qSnap = await getDocs(query(collection(db,'quizzes')));
       const quizList = qSnap.docs.map(d=>({id:d.id,...d.data()}));
-
-      // Show quiz selection modal
       document.getElementById('modal-title').textContent = `Dozvoli ponavljanje — ${name}`;
       document.getElementById('modal-body').innerHTML = `
         <p style="margin-bottom:14px">Odaberite kviz koji učenik može ponovo riješiti:</p>
@@ -429,28 +658,27 @@
       document.getElementById('modal-confirm').onclick = async () => {
         const qid = document.getElementById('retry-quiz-select').value;
         if (!qid) { toast('Odaberite kviz','error'); return; }
-        // Delete that student's result for this quiz
         const rSnap = await getDocs(collection(db,'results'));
         const toDelete = rSnap.docs.filter(d=>d.data().userId===uid && d.data().quizId===qid);
         await Promise.all(toDelete.map(d=>deleteDoc(doc(db,'results',d.id))));
-        toast(`Dozvoljeno ponavljanje kviza za ${name}`,'success');
+        toast(`Dozvoljeno ponavljanje za ${name}`,'success');
         closeModal();
         await loadAll();
       };
       document.getElementById('modal').style.display = 'flex';
     };
 
-    // ── Modal helpers ──
     window.confirmAction = (title, body, onConfirm) => {
-      document.getElementById('modal-title').textContent  = title;
-      document.getElementById('modal-body').innerHTML     = body;
+      document.getElementById('modal-title').textContent   = title;
+      document.getElementById('modal-body').innerHTML      = body;
       document.getElementById('modal-confirm').textContent = 'Potvrdi';
-      document.getElementById('modal-confirm').className  = 'btn btn-danger';
-      document.getElementById('modal-confirm').onclick    = () => { onConfirm(); closeModal(); };
-      document.getElementById('modal').style.display      = 'flex';
+      document.getElementById('modal-confirm').className   = 'btn btn-danger';
+      document.getElementById('modal-confirm').onclick     = () => { onConfirm(); closeModal(); };
+      document.getElementById('modal').style.display       = 'flex';
     };
     window.closeModal = () => document.getElementById('modal').style.display = 'none';
-    document.getElementById('modal').onclick = (e) => { if (e.target===document.getElementById('modal')) closeModal(); };
+    document.getElementById('modal').onclick = (e) => { if(e.target===document.getElementById('modal')) closeModal(); };
+    document.getElementById('edit-modal').onclick = (e) => { if(e.target===document.getElementById('edit-modal')) closeEditModal(); };
   </script>
 </body>
 </html>
