@@ -19,8 +19,8 @@
     .tab-row   { display:flex; background:var(--bg3); border-radius:var(--r); padding:3px; margin-bottom:22px; gap:3px; }
     .tl        { flex:1; padding:8px; border:none; border-radius:8px; font-family:var(--fb); font-size:13.5px; font-weight:500; cursor:pointer; background:transparent; color:var(--text3); transition:all var(--t); }
     .tl.on     { background:var(--bg2); color:var(--text); box-shadow:0 1px 6px rgba(0,0,0,.3); }
-    .verify-box { text-align:center; padding:16px 0 8px; }
-    .verify-icon { font-size:52px; margin-bottom:14px; }
+    .verify-box   { text-align:center; padding:16px 0 8px; }
+    .verify-icon  { font-size:52px; margin-bottom:14px; }
     .verify-title { font-family:var(--fd); font-size:20px; font-weight:600; margin-bottom:8px; }
     .verify-desc  { font-size:13.5px; color:var(--text2); line-height:1.7; margin-bottom:20px; }
     #reg-fields, #verify-screen { display:none; }
@@ -29,17 +29,22 @@
 <body>
   <div class="glow g1"></div>
   <div class="glow g2"></div>
+
   <div class="box">
     <div class="logo">
       <span class="logo-icon">📚</span>
       <h1>KvizMajstor</h1>
       <p>AI platforma za testiranje učenika</p>
     </div>
+
     <div class="tab-row">
       <button class="tl on" onclick="switchMode('login')">Prijava</button>
       <button class="tl"    onclick="switchMode('register')">Registracija</button>
     </div>
+
+    <!-- Login / Register forma -->
     <form id="form">
+      <!-- Samo za registraciju -->
       <div id="reg-fields">
         <div class="fg">
           <label>Ime i prezime</label>
@@ -62,6 +67,7 @@
           </div>
         </div>
       </div>
+
       <div class="fg">
         <label>Email adresa</label>
         <input class="input" id="email" type="email" placeholder="vas@email.com" required/>
@@ -70,15 +76,23 @@
         <label>Lozinka</label>
         <input class="input" id="password" type="password" placeholder="••••••••" required/>
       </div>
+
       <div class="info-box" id="reg-info" style="display:none; margin-bottom:16px">
         <span>ℹ️</span>
         <span>Nakon registracije primit ćete verifikacijski email. Morate potvrditi email prije prijave.</span>
       </div>
-    <button class="btn btn-primary btn-full btn-lg" type="submit" id="submit-btn">Prijavi se</button>
-<button type="button" class="btn btn-ghost btn-full" id="reset-btn" style="margin-top:8px;display:none">
-  🔑 Zaboravili ste lozinku?
-</button>
+
+      <button class="btn btn-primary btn-full btn-lg" type="submit" id="submit-btn">
+        Prijavi se
+      </button>
+
+      <!-- Reset lozinke — vidljivo samo na login tabu -->
+      <button type="button" class="btn btn-ghost btn-full" id="reset-btn" style="margin-top:8px">
+        🔑 Zaboravili ste lozinku?
+      </button>
     </form>
+
+    <!-- Ekran za verifikaciju emaila -->
     <div id="verify-screen">
       <div class="verify-box">
         <div class="verify-icon">📬</div>
@@ -89,71 +103,90 @@
           Kliknite na link u emailu, zatim se prijavite ovdje.
         </div>
         <button class="btn btn-ghost btn-full" id="resend-btn">↺ Pošalji ponovo</button>
-        <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="switchMode('login')">← Nazad na prijavu</button>
+        <button type="button" class="btn btn-ghost btn-full" style="margin-top:8px" onclick="switchMode('login')">
+          ← Nazad na prijavu
+        </button>
       </div>
     </div>
   </div>
+
   <script type="module">
     import { auth, db } from '/js/firebase-config.js';
-    import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import {
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      sendEmailVerification,
+      sendPasswordResetEmail,
+      signOut
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import { doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { toast, btnLoad, btnReset } from '/js/utils.js';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-         sendEmailVerification, signOut, sendPasswordResetEmail 
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
     let mode = 'login';
 
     window.switchMode = (m) => {
       mode = m;
-      document.querySelectorAll('.tl').forEach((t,i) => t.classList.toggle('on', (i===0&&m==='login')||(i===1&&m==='register')));
-      document.getElementById('reg-fields').style.display    = m==='register'?'block':'none';
-      document.getElementById('reg-info').style.display      = m==='register'?'flex':'none';
+      document.querySelectorAll('.tl').forEach((t,i) =>
+        t.classList.toggle('on', (i===0 && m==='login') || (i===1 && m==='register'))
+      );
+      document.getElementById('reg-fields').style.display    = m === 'register' ? 'block' : 'none';
+      document.getElementById('reg-info').style.display      = m === 'register' ? 'flex'  : 'none';
+      document.getElementById('reset-btn').style.display     = m === 'login'    ? 'block' : 'none';
       document.getElementById('form').style.display          = 'block';
       document.getElementById('verify-screen').style.display = 'none';
-      document.getElementById('submit-btn').textContent      = m==='login'?'Prijavi se':'Kreiraj račun';
-      document.getElementById('reset-btn').style.display = m === 'login' ? 'block' : 'none';
+      document.getElementById('submit-btn').textContent      = m === 'login' ? 'Prijavi se' : 'Kreiraj račun';
     };
 
     const errMap = {
-      'auth/user-not-found':'Korisnik nije pronađen',
-      'auth/wrong-password':'Pogrešna lozinka',
-      'auth/invalid-credential':'Pogrešni podaci za prijavu',
-      'auth/email-already-in-use':'Email već postoji',
-      'auth/weak-password':'Lozinka mora imati min. 6 znakova',
-      'auth/invalid-email':'Nevažeći email format',
-      'auth/too-many-requests':'Previše pokušaja. Pokušajte za nekoliko minuta.',
+      'auth/user-not-found':       'Korisnik nije pronađen',
+      'auth/wrong-password':       'Pogrešna lozinka',
+      'auth/invalid-credential':   'Pogrešni podaci za prijavu',
+      'auth/email-already-in-use': 'Email već postoji',
+      'auth/weak-password':        'Lozinka mora imati min. 6 znakova',
+      'auth/invalid-email':        'Nevažeći email format',
+      'auth/too-many-requests':    'Previše pokušaja. Pokušajte za nekoliko minuta.',
     };
 
+    // ── Prijava / Registracija ──
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn   = document.getElementById('submit-btn');
       const email = document.getElementById('email').value.trim();
       const pass  = document.getElementById('password').value;
       btnLoad(btn);
+
       try {
         if (mode === 'login') {
           const cred = await signInWithEmailAndPassword(auth, email, pass);
+
           if (!cred.user.emailVerified) {
             await signOut(auth);
-            toast('Email nije potvrđen. Provjerite inbox i kliknite na link.', 'error', 5000);
-            btnReset(btn); return;
+            toast('Email nije potvrđen. Provjerite inbox i kliknite na verifikacijski link.', 'error', 6000);
+            btnReset(btn);
+            return;
           }
+
           const snap = await getDoc(doc(db, 'users', cred.user.uid));
           const role = snap.data()?.role || 'student';
           window.location.href = role === 'admin' ? '/admin' : '/student';
+
         } else {
           const name   = document.getElementById('name').value.trim();
           const razred = document.getElementById('razred').value;
           const smjer  = document.getElementById('smjer').value.trim();
+
           if (!name)   { toast('Unesite ime i prezime', 'error'); btnReset(btn); return; }
-          if (!razred) { toast('Odaberite razred', 'error'); btnReset(btn); return; }
+          if (!razred) { toast('Odaberite razred', 'error');      btnReset(btn); return; }
+
           const cred = await createUserWithEmailAndPassword(auth, email, pass);
           await sendEmailVerification(cred.user);
           await setDoc(doc(db, 'users', cred.user.uid), {
-            email, displayName: name, razred, smjer: smjer||'',
-            role: 'student', createdAt: new Date().toISOString()
+            email, displayName: name, razred,
+            smjer: smjer || '', role: 'student',
+            createdAt: new Date().toISOString()
           });
           await signOut(auth);
+
           document.getElementById('form').style.display          = 'none';
           document.getElementById('verify-screen').style.display = 'block';
           document.getElementById('verify-email').textContent    = email;
@@ -164,6 +197,27 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword,
       }
     });
 
+    // ── Reset lozinke ──
+    document.getElementById('reset-btn').onclick = async () => {
+      const email = document.getElementById('email').value.trim();
+      if (!email) {
+        toast('Unesite email adresu u polje iznad', 'error');
+        document.getElementById('email').focus();
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        toast('Email za reset lozinke je poslan! Provjerite inbox.', 'success', 6000);
+      } catch (err) {
+        const msgs = {
+          'auth/user-not-found': 'Email nije pronađen',
+          'auth/invalid-email':  'Nevažeći email format',
+        };
+        toast(msgs[err.code] || 'Greška: ' + err.message, 'error');
+      }
+    };
+
+    // ── Pošalji verifikaciju ponovo ──
     document.getElementById('resend-btn').onclick = async () => {
       try {
         const email = document.getElementById('email').value.trim();
@@ -172,23 +226,10 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword,
         await sendEmailVerification(cred.user);
         await signOut(auth);
         toast('Verifikacijski email poslan!', 'success');
-      } catch { toast('Greška pri slanju emaila', 'error'); }
+      } catch {
+        toast('Greška pri slanju emaila', 'error');
+      }
     };
-
-    document.getElementById('reset-btn').onclick = async () => {
-  const email = document.getElementById('email').value.trim();
-  if (!email) { toast('Unesite email adresu prvo', 'error'); return; }
-  try {
-    await sendPasswordResetEmail(auth, email);
-    toast('Email za reset lozinke je poslan!', 'success', 5000);
-  } catch(err) {
-    const msgs = {
-      'auth/user-not-found': 'Email nije pronađen',
-      'auth/invalid-email':  'Nevažeći email format',
-    };
-    toast(msgs[err.code] || 'Greška: ' + err.message, 'error');
-  }
-};
   </script>
 </body>
 </html>
