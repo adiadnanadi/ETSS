@@ -189,25 +189,34 @@
         <label>Opis</label>
         <input class="input" id="eq-desc" placeholder="Kratki opis kviza"/>
       </div>
-      <div class="row3">
-        <div class="fg">
-          <label>Težina</label>
-          <select class="select" id="eq-difficulty">
-            <option value="lako">Lako</option>
-            <option value="srednje">Srednje</option>
-            <option value="teško">Teško</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Vremenski limit (min)</label>
-          <input class="input" id="eq-time" type="number" min="5" max="120"/>
-        </div>
-        <div class="fg">
-          <label>Tema</label>
-          <input class="input" id="eq-topic" placeholder="Tema / modul"/>
-        </div>
-      </div>
-
+     <div class="row2">
+  <div class="fg">
+    <label>Težina</label>
+    <select class="select" id="eq-difficulty">
+      <option value="lako">Lako</option>
+      <option value="srednje">Srednje</option>
+      <option value="teško">Teško</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>Vremenski limit (min)</label>
+    <input class="input" id="eq-time" type="number" min="5" max="120"/>
+  </div>
+</div>
+<div class="row2">
+  <div class="fg">
+    <label>Tema</label>
+    <input class="input" id="eq-topic" placeholder="Tema / modul"/>
+  </div>
+  <div class="fg">
+    <label>Pregled rezultata</label>
+    <select class="select" id="eq-showresults">
+      <option value="always">Uvijek vidljivo</option>
+      <option value="never">Nikad</option>
+      <option value="after_close">Samo kad je kviz neaktivan</option>
+    </select>
+  </div>
+</div>
       <div class="divider"></div>
 
       <!-- Questions editor -->
