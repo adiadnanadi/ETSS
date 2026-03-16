@@ -5,6 +5,8 @@ import { Mistral } from '@mistralai/mistralai';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 dotenv.config();
 
@@ -13,9 +15,24 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 
+// ── Firebase Admin init ──────────────────────────────────────────────────────
+let adminAuth = null;
+try {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+  if (serviceAccount.project_id) {
+    initializeApp({ credential: cert(serviceAccount) });
+    adminAuth = getAuth();
+    console.log('✅ Firebase Admin inicijalizovan');
+  } else {
+    console.warn('⚠️  FIREBASE_SERVICE_ACCOUNT nije postavljen — brisanje iz Autha neće raditi');
+  }
+} catch(e) {
+  console.warn('⚠️  Firebase Admin greška:', e.message);
+}
+
 app.use(express.json({ limit: '20mb' }));
 
-// Serve static files with correct MIME types
+// Correct MIME types
 app.use((req, res, next) => {
   if (req.path.endsWith('.css')) res.type('text/css');
   else if (req.path.endsWith('.js')) res.type('application/javascript');
@@ -23,7 +40,7 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── PAGE ROUTES ─────────────────────────────────────────────────────────────
+// ── PAGE ROUTES ──────────────────────────────────────────────────────────────
 app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'public/pages/login.html')));
 app.get('/login',       (req, res) => res.sendFile(path.join(__dirname, 'public/pages/login.html')));
 app.get('/admin',       (req, res) => res.sendFile(path.join(__dirname, 'public/pages/admin.html')));
@@ -32,10 +49,28 @@ app.get('/create-quiz', (req, res) => res.sendFile(path.join(__dirname, 'public/
 app.get('/take-quiz',   (req, res) => res.sendFile(path.join(__dirname, 'public/pages/take-quiz.html')));
 app.get('/result',      (req, res) => res.sendFile(path.join(__dirname, 'public/pages/result.html')));
 
-// ─── API: HEALTH ─────────────────────────────────────────────────────────────
+// ── API: HEALTH ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
-// ─── API: GENERATE QUIZ ──────────────────────────────────────────────────────
+// ── API: DELETE USER FROM AUTH ───────────────────────────────────────────────
+app.delete('/api/admin/user/:uid', async (req, res) => {
+  if (!adminAuth) {
+    return res.status(503).json({ error: 'Firebase Admin nije konfigurisan' });
+  }
+  try {
+    await adminAuth.deleteUser(req.params.uid);
+    res.json({ success: true });
+  } catch(e) {
+    // Ako korisnik ne postoji u Authu, to je ok — možda je već obrisan
+    if (e.code === 'auth/user-not-found') {
+      res.json({ success: true, note: 'Korisnik nije bio u Authu' });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
+});
+
+// ── API: GENERATE QUIZ ───────────────────────────────────────────────────────
 app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF fajl je obavezan' });
@@ -115,7 +150,7 @@ Za tačno/netačno type="true_false", options=["Tačno","Netačno"].`;
   }
 });
 
-// ─── API: GRADE ──────────────────────────────────────────────────────────────
+// ── API: GRADE ───────────────────────────────────────────────────────────────
 app.post('/api/grade', async (req, res) => {
   try {
     const { questions, studentAnswers, studentName } = req.body;
@@ -140,10 +175,10 @@ app.post('/api/grade', async (req, res) => {
 
     const pct = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const gradeInfo = [
-      { min: 83, grade: 5, label: 'Odličan' },
-      { min: 70, grade: 4, label: 'Vrlo dobar' },
-      { min: 55, grade: 3, label: 'Dobar' },
-      { min: 38, grade: 2, label: 'Dovoljan' },
+      { min: 90, grade: 5, label: 'Odličan' },
+      { min: 75, grade: 4, label: 'Vrlo dobar' },
+      { min: 60, grade: 3, label: 'Dobar' },
+      { min: 50, grade: 2, label: 'Dovoljan' },
       { min: 0,  grade: 1, label: 'Nedovoljan' }
     ].find(g => pct >= g.min);
 
@@ -158,7 +193,7 @@ app.post('/api/grade', async (req, res) => {
   }
 });
 
-// ─── API: FEEDBACK ───────────────────────────────────────────────────────────
+// ── API: FEEDBACK ────────────────────────────────────────────────────────────
 app.post('/api/feedback', async (req, res) => {
   try {
     const { result, quizTitle } = req.body;
