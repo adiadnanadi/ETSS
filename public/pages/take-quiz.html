@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="/css/style.css"/>
   <script src="/js/protection.js" defer></script>
   <style>
-    /* Intro */
     #phase-intro { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
     .intro-box  { background:var(--bg2); border:1px solid var(--border2); border-radius:24px; padding:40px; width:100%; max-width:500px; text-align:center; box-shadow:var(--shadow-lg); animation:fadeUp .4s ease; }
     .intro-icon { font-size:48px; margin-bottom:16px; }
@@ -18,8 +17,6 @@
     .im-lbl     { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; }
     .im-val     { font-size:18px; font-weight:600; color:var(--text); margin-top:2px; }
     .intro-rules{ background:var(--bg3); border-radius:var(--r); padding:14px; margin-bottom:24px; text-align:left; font-size:13px; color:var(--text2); display:flex; flex-direction:column; gap:6px; }
-
-    /* Topbar */
     #phase-quiz  { min-height:100vh; }
     .quiz-topbar { background:rgba(13,15,20,.92); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); position:sticky; top:0; z-index:40; }
     .qtb-inner   { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; }
@@ -27,23 +24,16 @@
     .qtb-title   { font-family:var(--fd); font-size:16px; font-weight:600; }
     .qtb-timer   { font-family:var(--fm); font-size:18px; font-weight:600; background:var(--bg3); padding:4px 14px; border-radius:var(--r); transition:all var(--t); }
     .timer-warn  { color:var(--amber); background:var(--amber-dim); }
-    .timer-urg   { color:var(--red);   background:var(--red-dim); animation:pulse 1s ease infinite; }
-
-    /* Body */
+    .timer-urg   { color:var(--red); background:var(--red-dim); animation:pulse 1s ease infinite; }
     .quiz-body { display:grid; grid-template-columns:200px 1fr; gap:24px; max-width:1080px; margin:0 auto; padding:24px; align-items:start; }
     @media(max-width:680px){ .quiz-body{grid-template-columns:1fr;} .quiz-nav{order:2;} .q-area{order:1;} }
-
-    /* Nav */
     .quiz-nav    { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r-lg); padding:16px; position:sticky; top:80px; display:flex; flex-direction:column; gap:12px; }
     .nav-lbl     { font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; }
     .nav-dots    { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
     .nd { aspect-ratio:1; border:1px solid var(--border); background:var(--bg3); border-radius:8px; font-size:11px; font-weight:600; color:var(--text3); cursor:pointer; transition:all var(--t); display:flex; align-items:center; justify-content:center; }
-    .nd:hover     { border-color:var(--accent); color:var(--accent); }
-    .nd.cur       { border-color:var(--accent)!important; background:var(--accent-dim)!important; color:var(--accent)!important; }
-    .nd.ans       { border-color:rgba(74,222,128,.4); background:var(--green-dim); color:var(--green); }
-
-    /* Question */
-    .q-area  { }
+    .nd:hover { border-color:var(--accent); color:var(--accent); }
+    .nd.cur   { border-color:var(--accent)!important; background:var(--accent-dim)!important; color:var(--accent)!important; }
+    .nd.ans   { border-color:rgba(74,222,128,.4); background:var(--green-dim); color:var(--green); }
     .q-card  { display:flex; flex-direction:column; gap:20px; }
     .qc-hdr  { display:flex; justify-content:space-between; align-items:center; }
     .qc-num  { font-size:13px; color:var(--text3); }
@@ -51,8 +41,8 @@
     .qc-text { font-family:var(--fd); font-size:21px; font-weight:600; line-height:1.4; }
     .qc-opts { display:flex; flex-direction:column; gap:10px; }
     .qc-opt  { display:flex; align-items:center; gap:14px; background:var(--bg3); border:2px solid var(--border); border-radius:var(--r-lg); padding:14px 18px; cursor:pointer; transition:all var(--t); font-family:var(--fb); font-size:15px; color:var(--text2); width:100%; text-align:left; }
-    .qc-opt:hover   { border-color:var(--accent); color:var(--text); background:var(--accent-dim); }
-    .qc-opt.sel     { border-color:var(--accent)!important; background:var(--accent-dim)!important; color:var(--text)!important; }
+    .qc-opt:hover { border-color:var(--accent); color:var(--text); background:var(--accent-dim); }
+    .qc-opt.sel   { border-color:var(--accent)!important; background:var(--accent-dim)!important; color:var(--text)!important; }
     .qc-ltr  { width:28px; height:28px; border-radius:8px; background:var(--bg2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--text3); flex-shrink:0; transition:all var(--t); }
     .qc-opt.sel .qc-ltr { background:var(--accent); border-color:var(--accent); color:#fff; }
     .qc-nav  { display:flex; justify-content:space-between; padding-top:16px; border-top:1px solid var(--border); }
@@ -60,7 +50,6 @@
 </head>
 <body>
 
-<!-- Intro phase -->
 <div id="phase-intro" style="display:none">
   <div class="intro-box">
     <div class="intro-icon">📝</div>
@@ -81,7 +70,6 @@
   </div>
 </div>
 
-<!-- Quiz phase -->
 <div id="phase-quiz" style="display:none">
   <div class="quiz-topbar">
     <div class="qtb-inner">
@@ -105,7 +93,6 @@
   </div>
 </div>
 
-<!-- Loading / submitting -->
 <div id="phase-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px">
   <div class="spinner" style="width:36px;height:36px;border-width:3px"></div>
   <p style="color:var(--text2);font-size:14px" id="load-msg">Učitavanje kviza...</p>
@@ -118,11 +105,10 @@
   import { toast } from '/js/utils.js';
 
   const params = new URLSearchParams(location.search);
-  const quizId = params.get('id') || sessionStorage.getItem('quizId');
+  const quizId = params.get('id');
 
   let quiz, questions, answers = {}, currentIdx = 0, timeLeft, timerRef, user;
 
-  // ── Auth ──
   onAuthStateChanged(auth, async (u) => {
     if (!u) { window.location.href = '/login'; return; }
     user = u;
@@ -133,10 +119,14 @@
   async function loadQuiz() {
     try {
       const snap = await getDoc(doc(db, 'quizzes', quizId));
-      if (!snap.exists()) { toast('Kviz nije pronađen', 'error'); setTimeout(() => window.location.href='/student',1500); return; }
+      if (!snap.exists()) {
+        toast('Kviz nije pronađen', 'error');
+        setTimeout(() => { window.location.href = '/student'; }, 1500);
+        return;
+      }
       quiz = { id: snap.id, ...snap.data() };
       questions = [...quiz.questions];
-      if (quiz.shuffleQuestions) questions.sort(() => Math.random() - .5);
+      if (quiz.shuffleQuestions) questions.sort(() => Math.random() - 0.5);
       showIntro();
     } catch(e) {
       toast('Greška: ' + e.message, 'error');
@@ -149,13 +139,13 @@
     document.getElementById('i-title').textContent = quiz.title;
     document.getElementById('i-desc').textContent  = quiz.description || '';
     document.getElementById('i-num').textContent   = questions.length;
-    document.getElementById('i-time').textContent  = (quiz.timeLimit||30) + ' min';
+    document.getElementById('i-time').textContent  = (quiz.timeLimit || 30) + ' min';
     document.getElementById('i-pts').textContent   = quiz.totalPoints || questions.length;
     document.getElementById('i-diff').textContent  = quiz.difficulty;
   }
 
-  document.getElementById('start-btn').onclick = () => {
-    window._quizActive = true; // Aktiviraj zaštitu
+  document.getElementById('start-btn').onclick = function() {
+    window._quizActive = true;
     document.getElementById('phase-intro').style.display = 'none';
     document.getElementById('phase-quiz').style.display  = 'block';
     document.getElementById('qtb-title').textContent = quiz.title;
@@ -167,111 +157,135 @@
 
   function buildNav() {
     const nav = document.getElementById('nav-dots');
-    nav.innerHTML = questions.map((_, i) => `<button class="nd" id="nd-${i}" onclick="goTo(${i})">${i+1}</button>`).join('');
+    nav.innerHTML = questions.map(function(_, i) {
+      return '<button class="nd" id="nd-' + i + '" onclick="goTo(' + i + ')">' + (i+1) + '</button>';
+    }).join('');
   }
 
   function renderQ(idx) {
     currentIdx = idx;
     const q = questions[idx];
-    document.getElementById('qtb-prog').textContent = `${Object.keys(answers).length}/${questions.length} odgovoreno`;
-    document.getElementById('qtb-fill').style.width = (Object.keys(answers).length / questions.length * 100) + '%';
+    const answered = Object.keys(answers).length;
+    document.getElementById('qtb-prog').textContent = answered + '/' + questions.length + ' odgovoreno';
+    document.getElementById('qtb-fill').style.width = (answered / questions.length * 100) + '%';
 
-    // Update nav dots
-    questions.forEach((_, i) => {
-      const nd = document.getElementById('nd-'+i);
-      nd.className = 'nd' + (i===idx?' cur':answers[questions[i].id]?' ans':'');
+    questions.forEach(function(_, i) {
+      const nd = document.getElementById('nd-' + i);
+      if (!nd) return;
+      nd.className = 'nd' + (i === idx ? ' cur' : (answers[questions[i].id] ? ' ans' : ''));
     });
 
     const letters = ['A','B','C','D','E'];
-    document.getElementById('q-card').innerHTML = `
-      <div class="qc-hdr">
-        <span class="qc-num">Pitanje ${idx+1} od ${questions.length}</span>
-        <span class="qc-pts">${q.points||1} bod(a)</span>
-      </div>
-      <div class="qc-text">${q.question}</div>
-      <div class="qc-opts">
-        ${q.options.map((opt,i) => `
-          <button class="qc-opt${answers[q.id]===opt?' sel':''}" onclick="answer('${q.id}','${opt.replace(/'/g,"\\'")}',${idx})">
-            <span class="qc-ltr">${letters[i]||i+1}</span><span>${opt}</span>
-          </button>`).join('')}
-      </div>
-      <div class="qc-nav">
-        <button class="btn btn-ghost" ${idx===0?'disabled':''} onclick="goTo(${idx-1})">← Prethodno</button>
-        ${idx < questions.length-1
-          ? `<button class="btn btn-primary" onclick="goTo(${idx+1})">Sljedeće →</button>`
-          : `<button class="btn btn-success" onclick="confirmSubmit()">✓ Predaj kviz</button>`
-        }
-      </div>`;
+    let optsHtml = '';
+    q.options.forEach(function(opt, i) {
+      const sel = answers[q.id] === opt ? ' sel' : '';
+      const safeOpt = opt.replace(/'/g, "\\'");
+      optsHtml += '<button class="qc-opt' + sel + '" onclick="answer(\'' + q.id + '\',\'' + safeOpt + '\',' + idx + ')">' +
+        '<span class="qc-ltr">' + (letters[i] || (i+1)) + '</span><span>' + opt + '</span></button>';
+    });
+
+    let navBtns = '<button class="btn btn-ghost" ' + (idx === 0 ? 'disabled' : '') + ' onclick="goTo(' + (idx-1) + ')">← Prethodno</button>';
+    if (idx < questions.length - 1) {
+      navBtns += '<button class="btn btn-primary" onclick="goTo(' + (idx+1) + ')">Sljedeće →</button>';
+    } else {
+      navBtns += '<button class="btn btn-success" onclick="confirmSubmit()">✓ Predaj kviz</button>';
+    }
+
+    document.getElementById('q-card').innerHTML =
+      '<div class="qc-hdr">' +
+        '<span class="qc-num">Pitanje ' + (idx+1) + ' od ' + questions.length + '</span>' +
+        '<span class="qc-pts">' + (q.points || 1) + ' bod(a)</span>' +
+      '</div>' +
+      '<div class="qc-text">' + q.question + '</div>' +
+      '<div class="qc-opts">' + optsHtml + '</div>' +
+      '<div class="qc-nav">' + navBtns + '</div>';
   }
 
-  window.goTo     = (i) => renderQ(i);
-  window.answer   = (qid, opt, idx) => { answers[qid] = opt; renderQ(idx); };
-  window.confirmSubmit = () => {
+  window.goTo = function(i) { renderQ(i); };
+  window.answer = function(qid, opt, idx) { answers[qid] = opt; renderQ(idx); };
+  window.confirmSubmit = function() {
     const ans = Object.keys(answers).length;
-    if (confirm(`Predati kviz? Odgovorili ste na ${ans}/${questions.length} pitanja.`)) submitQuiz();
+    if (confirm('Predati kviz? Odgovorili ste na ' + ans + '/' + questions.length + ' pitanja.')) {
+      submitQuiz();
+    }
   };
 
   document.getElementById('submit-btn').onclick = window.confirmSubmit;
 
   function startTimer() {
     updateTimerUI();
-    timerRef = setInterval(() => {
+    timerRef = setInterval(function() {
       timeLeft--;
       updateTimerUI();
-      if (timeLeft <= 0) { clearInterval(timerRef);
-    window._quizActive = false; // Deaktiviraj zaštitu submitQuiz(); }
+      if (timeLeft <= 0) {
+        clearInterval(timerRef);
+        window._quizActive = false;
+        submitQuiz();
+      }
     }, 1000);
   }
 
   function updateTimerUI() {
-    const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
-    const s = String(timeLeft%60).padStart(2,'0');
+    const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+    const s = String(timeLeft % 60).padStart(2, '0');
     const el = document.getElementById('qtb-timer');
-    el.textContent = `⏱ ${m}:${s}`;
-    el.className = 'qtb-timer' + (timeLeft<60?' timer-urg':timeLeft<300?' timer-warn':'');
+    el.textContent = '⏱ ' + m + ':' + s;
+    el.className = 'qtb-timer' + (timeLeft < 60 ? ' timer-urg' : timeLeft < 300 ? ' timer-warn' : '');
   }
 
-  // Auto-submit kada učenik napusti tab 3 puta
   window.autoSubmitQuiz = submitQuiz;
 
   async function submitQuiz() {
     clearInterval(timerRef);
-    window._quizActive = false; // Deaktiviraj zaštitu
-    document.getElementById('phase-quiz').style.display = 'none';
+    window._quizActive = false;
+    document.getElementById('phase-quiz').style.display   = 'none';
     document.getElementById('phase-loading').style.display = 'flex';
-    document.getElementById('load-msg').textContent = 'AI ocjenjuje vaše odgovore...';
+    document.getElementById('load-msg').textContent = 'Kviz se ocjenjuje...';
 
     try {
       const res = await fetch('/api/grade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions, studentAnswers: answers, studentName: user.email.split('@')[0] })
+        body: JSON.stringify({ questions: questions, studentAnswers: answers, studentName: user.email.split('@')[0] })
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      // Get feedback
       let feedback = '';
       try {
         const fb = await fetch('/api/feedback', {
-          method:'POST', headers:{'Content-Type':'application/json'},
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ result: data.result, quizTitle: quiz.title })
         });
         const fbData = await fb.json();
         feedback = fbData.feedback || '';
-      } catch {}
+      } catch(e) {}
 
-      const userSnap = await getDoc(doc(db,'users',user.uid));
+      const userSnap = await getDoc(doc(db, 'users', user.uid));
       const uData = userSnap.data();
-      const resultData = { ...data.result, userId: user.uid, quizId, quizTitle: quiz.title, quizSubject: quiz.subject||'', razred: uData?.razred||'', smjer: uData?.smjer||'', completedAt: new Date().toISOString() };
-      const docRef = await addDoc(collection(db, 'results'), resultData);
+      const resultData = {
+        ...data.result,
+        userId: user.uid,
+        quizId: quizId,
+        quizTitle: quiz.title,
+        quizSubject: quiz.subject || '',
+        razred: uData ? (uData.razred || '') : '',
+        smjer: uData ? (uData.smjer || '') : '',
+        completedAt: new Date().toISOString()
+      };
 
-      sessionStorage.setItem('lastResult', JSON.stringify({ ...resultData, id: docRef.id, feedback, showExplanations: quiz.showExplanations }));
+      const docRef = await addDoc(collection(db, 'results'), resultData);
+      sessionStorage.setItem('lastResult', JSON.stringify({
+        ...resultData, id: docRef.id, feedback: feedback, showExplanations: quiz.showExplanations
+      }));
       window.location.href = '/result?id=' + docRef.id + '&fresh=1';
+
     } catch(e) {
       toast('Greška pri predaji: ' + e.message, 'error');
       document.getElementById('phase-loading').style.display = 'none';
-      document.getElementById('phase-quiz').style.display = 'block';
+      document.getElementById('phase-quiz').style.display    = 'block';
+      window._quizActive = true;
     }
   }
 </script>
