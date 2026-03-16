@@ -98,7 +98,9 @@
     import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import { doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { toast, btnLoad, btnReset } from '/js/utils.js';
-
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+         sendEmailVerification, signOut, sendPasswordResetEmail 
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     let mode = 'login';
 
     window.switchMode = (m) => {
