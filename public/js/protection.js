@@ -4,15 +4,15 @@
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
 // 2. Onemogući kopiranje
-document.addEventListener('copy',  function(e) { e.preventDefault(); });
-document.addEventListener('cut',   function(e) { e.preventDefault(); });
+document.addEventListener('copy', function(e) { e.preventDefault(); });
+document.addEventListener('cut',  function(e) { e.preventDefault(); });
 
 // 3. Onemogući označavanje teksta
 document.body.style.userSelect       = 'none';
 document.body.style.webkitUserSelect = 'none';
 document.body.style.msUserSelect     = 'none';
 
-// 4. Keyboard shortcuts
+// 4. Keyboard shortcuts — SVE unutar jednog listenera
 document.addEventListener('keydown', function(e) {
   var key = e.key.toLowerCase();
 
@@ -20,15 +20,17 @@ document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (key === 'c' || key === 'x' || key === 'a' || key === 's' || key === 'p' || key === 'u')) {
     e.preventDefault();
   }
+
+  // F12
+  if (e.key === 'F12') {
+    e.preventDefault();
+  }
+
+  // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+  if (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) {
+    e.preventDefault();
+  }
 });
-// F12
-if (e.key === 'F12') {
-  e.preventDefault();
-}
-// Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
-if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
-  e.preventDefault();
-}
 
 // 5. Print Screen detekcija
 document.addEventListener('keyup', function(e) {
@@ -48,7 +50,6 @@ document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
     warningCount++;
     window._tabSwitches = warningCount;
-
     if (warningCount >= 3) {
       showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.');
       setTimeout(function() {
