@@ -637,11 +637,18 @@
       await loadAll();
     };
 
-    window.deleteStudent = async (uid) => {
-      await deleteDoc(doc(db,'users',uid));
-      toast('Učenik obrisan','success');
-      await loadAll();
-    };
+   window.deleteStudent = async (uid) => {
+  try {
+    // Obriši iz Firestore
+    await deleteDoc(doc(db,'users',uid));
+    // Obriši iz Firebase Auth (da se može ponovo registrovati)
+    await fetch(`/api/admin/user/${uid}`, { method: 'DELETE' });
+    toast('Učenik potpuno obrisan — može se ponovo registrovati', 'success');
+    await loadAll();
+  } catch(e) {
+    toast('Greška pri brisanju: ' + e.message, 'error');
+  }
+};
 
     window.allowRetry = async (uid, name) => {
       const qSnap = await getDocs(query(collection(db,'quizzes')));
