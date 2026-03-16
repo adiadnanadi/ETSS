@@ -18,12 +18,7 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && ['c','x','v','a','s','p','u'].includes(e.key.toLowerCase())) {
     e.preventDefault();
   }
-  // F12 - DevTools
-  if (e.key === 'F12') e.preventDefault();
-  // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C - DevTools
-  if (e.ctrlKey && e.shiftKey && ['i','j','c'].includes(e.key.toLowerCase())) {
-    e.preventDefault();
-  }
+
   // Ctrl+U - View source
   if (e.ctrlKey && e.key.toLowerCase() === 'u') e.preventDefault();
 });
