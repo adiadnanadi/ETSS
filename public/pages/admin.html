@@ -374,7 +374,7 @@
       document.getElementById('eq-difficulty').value = editingQuiz.difficulty || 'srednje';
       document.getElementById('eq-time').value       = editingQuiz.timeLimit || 30;
       document.getElementById('eq-topic').value      = editingQuiz.topic || '';
-
+      document.getElementById('eq-showresults').value = editingQuiz.showResults || 'always';
       renderEditQuestions();
       document.getElementById('edit-modal').style.display = 'flex';
     };
@@ -494,6 +494,7 @@
       editingQuiz.topic       = document.getElementById('eq-topic').value.trim();
       editingQuiz.numQuestions = editingQuiz.questions.length;
       editingQuiz.totalPoints  = editingQuiz.questions.reduce((s,q)=>s+(q.points||1),0);
+      editingQuiz.showResults = document.getElementById('eq-showresults').value;
 
       // Validate
       for (let i=0; i<editingQuiz.questions.length; i++) {
