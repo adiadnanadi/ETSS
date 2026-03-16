@@ -172,6 +172,21 @@
         toast('Verifikacijski email poslan!', 'success');
       } catch { toast('Greška pri slanju emaila', 'error'); }
     };
+
+    document.getElementById('reset-btn').onclick = async () => {
+  const email = document.getElementById('email').value.trim();
+  if (!email) { toast('Unesite email adresu prvo', 'error'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    toast('Email za reset lozinke je poslan!', 'success', 5000);
+  } catch(err) {
+    const msgs = {
+      'auth/user-not-found': 'Email nije pronađen',
+      'auth/invalid-email':  'Nevažeći email format',
+    };
+    toast(msgs[err.code] || 'Greška: ' + err.message, 'error');
+  }
+};
   </script>
 </body>
 </html>
