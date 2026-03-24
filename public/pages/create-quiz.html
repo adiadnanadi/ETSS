@@ -239,38 +239,65 @@
         if (i < 3) document.getElementById('sline'+i).className = 'sline' + (i < n ? ' done' : '');
       });
     }
+document.getElementById('gen-btn').onclick = async () => {
+  setStep(2);
+  try {
+    const numQ = +document.getElementById('numQ').value;
+    const CHUNK_SIZE = 10; // max pitanja po requestu
+    const allQuestions = [];
+    let quizMeta = null;
 
-    document.getElementById('gen-btn').onclick = async () => {
-      setStep(2);
-      try {
-        const fd = new FormData();
-        fd.append('pdf', pdfFile);
-        fd.append('numQuestions', document.getElementById('numQ').value);
-        fd.append('difficulty', document.getElementById('difficulty').value);
-        fd.append('questionTypes', document.getElementById('qtype').value);
-        fd.append('subject', document.getElementById('subject').value);
-        fd.append('topic', document.getElementById('topic').value);
+    const batches = Math.ceil(numQ / CHUNK_SIZE);
 
-        const res = await fetch('/api/generate-quiz', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error);
+    for (let b = 0; b < batches; b++) {
+      const batchSize = Math.min(CHUNK_SIZE, numQ - allQuestions.length);
 
-        generatedQuiz = {
-          ...data.quiz,
-          timeLimit:        +document.getElementById('timeLimit').value,
-          shuffleQuestions:  document.getElementById('shuffle').checked,
-          showExplanations:  document.getElementById('showExpl').checked,
-          showResults:       document.getElementById('showResults').value
-        };
-        renderPreview();
-        setStep(3);
-        toast(`Generisano ${generatedQuiz.questions.length} pitanja!`, 'success');
-      } catch(e) {
-        toast('Greška: ' + e.message, 'error');
-        setStep(1);
+      const fd = new FormData();
+      fd.append('pdf', pdfFile);
+      fd.append('numQuestions', batchSize);
+      fd.append('difficulty',   document.getElementById('difficulty').value);
+      fd.append('questionTypes',document.getElementById('qtype').value);
+      fd.append('subject',      document.getElementById('subject').value);
+      fd.append('topic',        document.getElementById('topic').value);
+      fd.append('batchIndex',   b);
+      fd.append('totalBatches', batches);
+
+      // Pošalji već generisana pitanja da AI ne ponavlja
+      if (allQuestions.length > 0) {
+        fd.append('existingQuestions', JSON.stringify(
+          allQuestions.map(q => ({ question: q.question }))
+        ));
       }
+
+      const res = await fetch('/api/generate-quiz', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      allQuestions.push(...data.quiz.questions);
+
+      // Metadata (title, description) uzimamo iz prvog batcha
+      if (b === 0) quizMeta = data.quiz;
+    }
+
+    generatedQuiz = {
+      ...quizMeta,
+      questions:        allQuestions,
+      numQuestions:     allQuestions.length,
+      totalPoints:      allQuestions.reduce((s, q) => s + (q.points || 1), 0),
+      timeLimit:        +document.getElementById('timeLimit').value,
+      shuffleQuestions:  document.getElementById('shuffle').checked,
+      showExplanations:  document.getElementById('showExpl').checked,
+      showResults:       document.getElementById('showResults').value
     };
 
+    renderPreview();
+    setStep(3);
+    toast(`Generisano ${generatedQuiz.questions.length} pitanja!`, 'success');
+  } catch(e) {
+    toast('Greška: ' + e.message, 'error');
+    setStep(1);
+  }
+};
     function renderPreview() {
       const srLabels = { always: 'Uvijek vidljivo', after_close: 'Nakon zatvaranja', never: 'Nikad' };
       document.getElementById('prev-title').textContent = generatedQuiz.title;
