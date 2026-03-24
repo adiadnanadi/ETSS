@@ -166,34 +166,45 @@
 
       // Provjeri da li je dozvoljeno gledanje rezultata
 async function checkShowResults() {
-  const showResults = result.showResults || 'always';
-  
+  let showResults = 'always';
+
+  try {
+    // UVIJEK čitaj iz quizzes dokumenta — jedino tako reaguje na promjene
+    const qSnap = await getDoc(doc(db, 'quizzes', result.quizId));
+    if (qSnap.exists()) {
+      showResults = qSnap.data()?.showResults || 'always';
+    }
+  } catch(e) {
+    // Fallback na zamrznutu vrijednost iz result dokumenta
+    showResults = result.showResults || 'always';
+  }
+
+  const gradedAnswers = result.gradedAnswers || [];
+
   if (showResults === 'never') {
     document.getElementById('answers-section').style.display = 'none';
-    document.getElementById('results-locked-msg').style.display = 'flex';
+    document.getElementById('results-locked-msg').style.display = 'block';
     return;
   }
-  
+
   if (showResults === 'after_close') {
-    // Učitaj kviz i provjeri status
     try {
       const qSnap = await getDoc(doc(db, 'quizzes', result.quizId));
-      const quizStatus = qSnap.data()?.status;
-      if (quizStatus === 'active') {
+      if (qSnap.data()?.status === 'active') {
         document.getElementById('answers-section').style.display = 'none';
-        document.getElementById('results-locked-msg').style.display = 'flex';
+        document.getElementById('results-locked-msg').style.display = 'block';
         return;
       }
     } catch(e) {}
   }
-  
+
   // Prikaži odgovore
   if (result.showExplanations !== false && gradedAnswers.length) {
     document.getElementById('answers-section').style.display = 'block';
     renderAnswers(gradedAnswers);
   }
 }
-checkShowResults();
+      checkShowResults();
 
       // Show retry if student owns it
      
