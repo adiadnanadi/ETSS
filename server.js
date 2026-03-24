@@ -75,17 +75,31 @@ app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'PDF fajl je obavezan' });
 
-    const { numQuestions = 10, difficulty = 'srednje', questionTypes = 'multiple_choice', subject = '', topic = '' } = req.body;
+    const {
+      numQuestions = 10,
+      difficulty = 'srednje',
+      questionTypes = 'multiple_choice',
+      subject = '',
+      topic = '',
+      batchIndex = '0',
+      totalBatches = '1',
+      existingQuestions = ''   // JSON string liste već generisanih pitanja
+    } = req.body;
+
+    const num = parseInt(numQuestions);
+    const bIdx = parseInt(batchIndex);
+    const tBatches = parseInt(totalBatches);
 
     const pdfData = await pdfParse(req.file.buffer);
-    const text = pdfData.text.slice(0, 12000);
+    // Povećaj limit teksta — za veće kvizove treba više konteksta
+    const text = pdfData.text.slice(0, 15000);
 
     if (text.trim().length < 100)
       return res.status(400).json({ error: 'PDF ne sadrži dovoljno teksta' });
 
     const diffMap = {
       lako:   'jednostavna pitanja, osnovno razumijevanje',
-      srednje:'pitanja srednje težine, razumijevanje koncepta',
+      srednje: 'pitanja srednje težine, razumijevanje koncepta',
       teško:  'izazovna pitanja, dublje razmišljanje i analiza'
     };
     const typeMap = {
@@ -94,7 +108,17 @@ app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
       mixed:           'mješovito: 70% višestruki odabir, 30% tačno/netačno'
     };
 
-    const prompt = `Si ekspert za obrazovanje. Generiši ${numQuestions} pitanja za kviz na osnovu gradiva.
+    // Ako je batch > 0, recite AI-u koja pitanja su već napravljena
+    let avoidNote = '';
+    if (bIdx > 0 && existingQuestions) {
+      try {
+        const existing = JSON.parse(existingQuestions);
+        const titles = existing.map((q, i) => `${i+1}. ${q.question}`).join('\n');
+        avoidNote = `\n\nVAŽNO: Ovo je batch ${bIdx + 1} od ${tBatches}. Sljedeća pitanja su VEĆ GENERISANA — nemoj ih ponavljati niti praviti slična:\n${titles}\n\nGeneriši POTPUNO DRUGAČIJA pitanja koja pokrivaju druge aspekte gradiva.\n`;
+      } catch(e) {}
+    }
+
+    const prompt = `Si ekspert za obrazovanje. Generiši TAČNO ${num} pitanja za kviz na osnovu gradiva.${avoidNote}
 
 GRADIVO:
 ${text}
@@ -105,14 +129,15 @@ ZAHTJEVI:
 - Težina: ${diffMap[difficulty] || diffMap.srednje}
 - Tip: ${typeMap[questionTypes] || typeMap.multiple_choice}
 - Jezik: Bosanski/Hrvatski/Srpski
+- OBAVEZNO generiši TAČNO ${num} pitanja, ne manje
 
-Vrati SAMO JSON, bez markdown backtick-ova, bez objašnjenja:
+Vrati SAMO JSON, bez markdown backtick-ova, bez ikakvog teksta prije ili poslije:
 {
   "title": "Naziv kviza",
   "description": "Kratki opis",
   "questions": [
     {
-      "id": "q1",
+      "id": "q_${bIdx}_1",
       "type": "multiple_choice",
       "question": "Tekst pitanja?",
       "options": ["A) Opcija 1", "B) Opcija 2", "C) Opcija 3", "D) Opcija 4"],
@@ -122,21 +147,28 @@ Vrati SAMO JSON, bez markdown backtick-ova, bez objašnjenja:
     }
   ]
 }
-Za tačno/netačno type="true_false", options=["Tačno","Netačno"].`;
+Za tačno/netačno: type="true_false", options=["Tačno","Netačno"].
+IDs moraju biti jedinstveni — koristi format q_${bIdx}_1, q_${bIdx}_2, itd.`;
 
     const response = await mistral.chat.complete({
       model: 'mistral-large-latest',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      maxTokens: 4000
+      temperature: 0.4,
+      maxTokens: 8000   // ← ovo je bio glavni problem! 4000 nije dovoljno za 25 pitanja
     });
 
     let content = response.choices[0].message.content.trim();
     content = content.replace(/```json|```/g, '').trim();
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Nevažeći JSON odgovor');
+    if (!jsonMatch) throw new Error('Nevažeći JSON odgovor od AI-a');
 
     const quiz = JSON.parse(jsonMatch[0]);
+
+    // Validacija — provjeri da ima dovoljno pitanja
+    if (!quiz.questions || quiz.questions.length < Math.floor(num * 0.8)) {
+      throw new Error(`AI je generisao samo ${quiz.questions?.length || 0} od ${num} traženih pitanja. Pokušaj ponovo.`);
+    }
+
     quiz.totalPoints  = quiz.questions.reduce((s, q) => s + (q.points || 1), 0);
     quiz.numQuestions = quiz.questions.length;
     quiz.difficulty   = difficulty;
@@ -145,7 +177,7 @@ Za tačno/netačno type="true_false", options=["Tačno","Netačno"].`;
 
     res.json({ success: true, quiz });
   } catch (e) {
-    console.error(e);
+    console.error('generate-quiz greška:', e);
     res.status(500).json({ error: e.message || 'Greška pri generisanju' });
   }
 });
