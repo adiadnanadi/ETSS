@@ -50,8 +50,7 @@ app.get('/take-quiz',   (req, res) => res.sendFile(path.join(__dirname, 'public/
 app.get('/result',      (req, res) => res.sendFile(path.join(__dirname, 'public/pages/result.html')));
 
 // ── API: HEALTH ──────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
-
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 // ── API: DELETE USER FROM AUTH ───────────────────────────────────────────────
 app.delete('/api/admin/user/:uid', async (req, res) => {
   if (!adminAuth) {
