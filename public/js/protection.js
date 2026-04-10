@@ -30,7 +30,7 @@ document.addEventListener('keyup', function(e) {
   if (e.key === 'PrintScreen') {
     document.body.style.filter = 'blur(10px)';
     setTimeout(function() { document.body.style.filter = ''; }, 2000);
-    showQuizWarning('Screenshot je onemogućen tokom kviza!');
+    showQuizWarning('Screenshot je onemogućen tokom kviza!', 'screenshot');
   }
 });
 
@@ -42,7 +42,7 @@ document.addEventListener('visibilitychange', function() {
     warningCount++;
     window._tabSwitches = warningCount;
     if (warningCount >= 3) {
-      showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.');
+      showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.', 'final');
       setTimeout(function() {
         if (typeof window.autoSubmitQuiz === 'function') {
           window.autoSubmitQuiz();
@@ -51,12 +51,12 @@ document.addEventListener('visibilitychange', function() {
     }
   } else {
     if (warningCount > 0 && warningCount < 3) {
-      showQuizWarning('Upozorenje ' + warningCount + '/3 — Ne napuštajte kviz tokom rješavanja!');
+      showQuizWarning('Ne napuštajte kviz tokom rješavanja!', 'tab');
     }
   }
 });
 
-// ─── NOVO: Blur detekcija (alt-tab, klik na drugu app) ───────────────────────
+// ─── Blur detekcija (alt-tab, klik na drugu app) ───────────────────────
 var blurTimeout = null;
 window.addEventListener('blur', function() {
   if (!window._quizActive) return;
@@ -66,14 +66,14 @@ window.addEventListener('blur', function() {
       warningCount++;
       window._tabSwitches = warningCount;
       if (warningCount >= 3) {
-        showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.');
+        showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.', 'final');
         setTimeout(function() {
           if (typeof window.autoSubmitQuiz === 'function') {
             window.autoSubmitQuiz();
           }
         }, 3000);
       } else {
-        showQuizWarning('Upozorenje ' + warningCount + '/3 — Detektovano prebacivanje na drugu aplikaciju!');
+        showQuizWarning('Detektovano prebacivanje na drugu aplikaciju!', 'blur');
       }
     }
   }, 500);
@@ -87,7 +87,7 @@ window.addEventListener('focus', function() {
   }
 });
 
-// ─── NOVO: Splitscreen detekcija (resize prozora) ────────────────────────────
+// ─── Splitscreen detekcija (resize prozora) ────────────────────────────
 var initialWidth  = window.innerWidth;
 var initialHeight = window.innerHeight;
 var splitWarned   = false;
@@ -109,14 +109,14 @@ window.addEventListener('resize', function() {
     warningCount++;
     window._tabSwitches = warningCount;
     if (warningCount >= 3) {
-      showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.');
+      showQuizWarning('Napustili ste kviz 3 puta! Kviz će biti automatski predan.', 'final');
       setTimeout(function() {
         if (typeof window.autoSubmitQuiz === 'function') {
           window.autoSubmitQuiz();
         }
       }, 3000);
     } else {
-      showQuizWarning('Upozorenje ' + warningCount + '/3 — Detektovano dijeljenje ekrana! Koristite cijeli ekran.');
+      showQuizWarning('Detektovano dijeljenje ekrana! Koristite cijeli ekran.', 'split');
     }
   }
 
@@ -126,32 +126,48 @@ window.addEventListener('resize', function() {
   }
 });
 
-// ─── Warning prikaz ───────────────────────────────────────────────────────────
-function showQuizWarning(msg) {
+// ─── Premium Warning prikaz ───────────────────────────────────────────────
+function showQuizWarning(msg, type) {
+  // Remove existing warnings
   var old = document.getElementById('quiz-warning');
   if (old) old.remove();
+
+  // Determine warning level
+  var level = warningCount >= 3 ? 3 : warningCount >= 2 ? 2 : 1;
+  var icon = level >= 3 ? '🚨' : level >= 2 ? '⚠️' : '⚡';
+
+  // Build warning dots (show 3 dots, fill based on count)
+  var dotsHtml = '';
+  for (var d = 0; d < 3; d++) {
+    dotsHtml += '<div class="warning-dot' + (d < warningCount ? ' active' : '') + '"></div>';
+  }
+
   var el = document.createElement('div');
   el.id = 'quiz-warning';
-  el.style.position       = 'fixed';
-  el.style.top            = '70px';
-  el.style.left           = '50%';
-  el.style.transform      = 'translateX(-50%)';
-  el.style.background     = 'rgba(232,104,90,.15)';
-  el.style.border         = '1px solid rgba(232,104,90,.4)';
-  el.style.color          = '#e8685a';
-  el.style.padding        = '12px 20px';
-  el.style.borderRadius   = '10px';
-  el.style.fontSize       = '14px';
-  el.style.fontWeight     = '500';
-  el.style.zIndex         = '9999';
-  el.style.backdropFilter = 'blur(12px)';
-  el.style.textAlign      = 'center';
-  el.style.maxWidth       = '90vw';
-  el.style.fontFamily     = 'Inter, sans-serif';
-  el.textContent = '⚠️ ' + msg;
+  el.className = 'quiz-warning-overlay';
+  el.innerHTML =
+    '<div class="quiz-warning-bar warn-level-' + level + '">' +
+      '<div class="warning-icon">' + icon + '</div>' +
+      '<span>Upozorenje ' + Math.min(warningCount, 3) + '/3 — ' + msg + '</span>' +
+      '<div class="warning-counter">' + dotsHtml + '</div>' +
+      '<div class="warning-progress"></div>' +
+    '</div>';
+
   document.body.appendChild(el);
-  setTimeout(function() {
-    if (el && el.parentNode) el.remove();
-  }, 4000);
+
+  // Auto-remove after 5 seconds (unless it's the final warning)
+  if (level < 3) {
+    setTimeout(function() {
+      if (el && el.parentNode) {
+        el.style.animation = 'none';
+        el.style.transition = 'opacity .4s ease, transform .4s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-100%)';
+        setTimeout(function() {
+          if (el && el.parentNode) el.remove();
+        }, 400);
+      }
+    }, 5000);
+  }
 }
 window._showQuizWarning = showQuizWarning;
