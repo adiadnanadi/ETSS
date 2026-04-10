@@ -274,19 +274,191 @@
     .glow-accent::after { content: ''; position: absolute; inset: -2px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: inherit; opacity: 0; z-index: -1; filter: blur(12px); transition: opacity .3s; }
     .glow-accent:hover::after { opacity: 0.3; }
 
-    @media(max-width: 768px) {
-      :root { --sidebar-w: 0px; }
+    /* ── MOBILE NAV ─────────────────────────────────── */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, rgba(15,17,35,.98), rgba(20,22,38,.98));
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 8px 16px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      z-index: 300;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.3);
+    }
+    .mobile-nav-items {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .2s;
+      border: none;
+      background: none;
+      color: #64748B;
+      font-family: var(--jk);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .mobile-nav-item svg { width: 22px; height: 22px; }
+    .mobile-nav-item:hover { color: #CBD5E1; }
+    .mobile-nav-item.active { color: var(--accent-light); }
+    .mobile-nav-item .nav-badge {
+      position: absolute;
+      top: 2px;
+      right: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .mobile-nav-item { position: relative; }
+
+    .mobile-header {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: rgba(15,17,35,.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 0 16px;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 200;
+    }
+    .mobile-header-brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #fff; text-decoration: none; }
+    .mobile-header-logo { width: 32px; height: 32px; background: linear-gradient(135deg,#6366F1,#22D3EE); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .mobile-header-logo svg { width: 18px; height: 18px; color: #fff; }
+    .mobile-header-actions { display: flex; align-items: center; gap: 8px; }
+    .mobile-header-btn { background: rgba(255,255,255,.06); border: none; color: #94A3B8; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .mobile-header-btn svg { width: 18px; height: 18px; }
+
+    /* ── RESPONSIVE ─────────────────────────────────── */
+    @media(max-width: 900px) {
+      :root { --sidebar-w: 0px; --top-h: 56px; }
       .sidebar { display: none; }
-      .main { padding: 20px; }
-      .row2, .row3 { grid-template-columns: 1fr; }
+      .topbar { display: none; }
+      .mobile-header { display: flex; }
+      .mobile-nav { display: block; }
+      .main { 
+        margin-left: 0; 
+        margin-top: 56px; 
+        margin-bottom: 80px;
+        padding: 16px; 
+      }
+      .stats-row { 
+        grid-template-columns: repeat(3, 1fr); 
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .stat-card { padding: 14px; }
+      .stat-icon { width: 36px; height: 36px; margin-bottom: 10px; }
+      .stat-icon svg { width: 18px; height: 18px; }
+      .stat-v { font-size: 22px; }
+      .stat-l { font-size: 10px; }
+      .ph { flex-direction: column; gap: 12px; }
+      .ph-title { font-size: 20px; }
+      .ph .btn2 { width: 100%; justify-content: center; }
+      .filter-bar { flex-direction: column; }
+      .search-wrap { width: 100%; }
+      .filter-select { width: 100%; }
+      .filter-count { width: 100%; text-align: center; margin-top: 8px; }
+      .quiz-grid { grid-template-columns: 1fr; gap: 12px; }
+      .card { padding: 16px; }
+      .ov-grid { grid-template-columns: 1fr; gap: 16px; }
+      .row2, .row3 { grid-template-columns: 1fr; gap: 12px; }
+      .qc-chips { gap: 6px; }
+      .chip2 { font-size: 11px; padding: 4px 8px; }
+      .qc-footer { flex-wrap: wrap; }
+      .qc-footer .btn2 { flex: 1; justify-content: center; }
+      .tbl-wrap { margin: 0 -16px; padding: 0 16px; }
+      .results-table { font-size: 12px; }
+      .results-table thead th, .results-table tbody td { padding: 10px 8px; }
+      .student-detail { width: 100%; }
+    }
+    @media(max-width: 600px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .stat-card { padding: 12px; }
+      .stat-v { font-size: 20px; }
+      .modal2, .modal2-lg { padding: 20px; margin: 10px; width: calc(100% - 20px); max-height: 85vh; }
+      .modal2-lg { max-width: 100%; }
+      .modal2-title { font-size: 16px; }
+      .modal2-foot { flex-direction: column; }
+      .modal2-foot .btn2 { width: 100%; justify-content: center; }
+      .tb-right { display: none; }
     }
     @media(max-width: 480px) {
-      .stats-row { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .stat-card { padding: 14px; }
+      .stat-v { font-size: 24px; }
+      .stat-icon { width: 40px; height: 40px; }
+      .stat-icon svg { width: 20px; height: 20px; }
+      .ph-title { font-size: 18px; }
+      .card-title { font-size: 13px; }
+      .qc-title2 { font-size: 14px; }
+      .empty-state { padding: 40px 16px; }
+      .empty-icon2 { font-size: 36px; }
     }
   </style>
 </head>
 <body>
+
+<!-- MOBILE HEADER -->
+<header class="mobile-header">
+  <a class="mobile-header-brand" href="/admin">
+    <div class="mobile-header-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    KvizMajstor
+  </a>
+  <div class="mobile-header-actions">
+    <button class="mobile-header-btn" onclick="window.location.href='/create-quiz'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    </button>
+    <button class="mobile-header-btn" id="mobile-logout-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- MOBILE NAV -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-items">
+    <button class="mobile-nav-item active" data-page="overview" onclick="switchPage(this); closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Pregled
+    </button>
+    <button class="mobile-nav-item" data-page="quizzes" onclick="switchPage(this); closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Kvizovi
+      <span class="nav-badge" id="mob-quiz-count">0</span>
+    </button>
+    <button class="mobile-nav-item" data-page="results" onclick="switchPage(this); closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Rezultati
+    </button>
+    <button class="mobile-nav-item" data-page="students" onclick="switchPage(this); closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Učenici
+    </button>
+  </div>
+</nav>
 
 <!-- TOPBAR -->
 <nav class="topbar">
@@ -622,15 +794,18 @@ onAuthStateChanged(auth, async (u) => {
 document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
 document.getElementById('modal').onclick = (e) => { if(e.target===document.getElementById('modal')) closeModal(); };
 document.getElementById('edit-modal').onclick = (e) => { if(e.target===document.getElementById('edit-modal')) closeEditModal(); };
+document.getElementById('mobile-logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
+
+function closeMobileNav() {}
 
 // Page switching
 window.switchPage = (btn) => {
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   const pg = btn.dataset.page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+pg).classList.add('active');
-  // close student detail
   document.getElementById('student-detail').classList.remove('open');
 };
 
@@ -682,6 +857,9 @@ function renderStats() {
   document.getElementById('sb-quiz-count').textContent = quizzes.length;
   document.getElementById('sb-res-count').textContent  = results.length;
   document.getElementById('sb-stu-count').textContent  = allStudents.length;
+  // Mobile badges
+  const mobBadge = document.getElementById('mob-quiz-count');
+  if (mobBadge) mobBadge.textContent = quizzes.length;
 }
 
 function renderOverview() {
