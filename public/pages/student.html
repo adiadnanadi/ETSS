@@ -4,160 +4,959 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KvizMajstor — Učenik</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css"/>
   <style>
-    .pg   { padding:28px 0 60px; }
-    .qg   { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-    .qcard { display:flex; flex-direction:column; gap:11px; transition:transform var(--t),box-shadow var(--t); }
-    .qcard:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
-    .qcard-subj  { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; }
-    .qcard-title { font-family:var(--fd); font-size:16px; font-weight:600; line-height:1.3; }
-    .qcard-desc  { font-size:13px; color:var(--text2); line-height:1.5; flex:1; }
-    .qcard-meta  { display:flex; gap:12px; font-size:12px; color:var(--text3); }
-    .locked-bar  { display:flex; align-items:center; gap:8px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--r); padding:10px 14px; font-size:13px; color:var(--text3); }
+    :root {
+      --jk: 'Plus Jakarta Sans', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --accent: #6366F1;
+      --accent-light: #818CF8;
+      --accent-dim: rgba(99,102,241,.15);
+      --accent2: #22D3EE;
+      --green: #34D399;
+      --green-dim: rgba(52,211,153,.15);
+      --amber: #FBBF24;
+      --amber-dim: rgba(251,191,36,.12);
+      --purple: #A78BFA;
+      --purple-dim: rgba(167,139,250,.12);
+      --red: #F87171;
+      --red-dim: rgba(248,113,113,.15);
+      --r: 14px;
+      --r-sm: 10px;
+      --r-lg: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: var(--jk); background: #0F1123; min-height: 100vh; }
+
+    /* ── HERO SECTION ─────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, rgba(30,32,48,.95), rgba(20,22,38,.98));
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      padding: 32px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99,102,241,.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -5%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(34,211,238,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-greeting { 
+      font-size: 14px; 
+      font-weight: 600; 
+      color: var(--accent-light); 
+      text-transform: uppercase; 
+      letter-spacing: .08em; 
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hero-greeting svg { width: 18px; height: 18px; }
+    .hero-title { 
+      font-size: 32px; 
+      font-weight: 800; 
+      letter-spacing: -.02em; 
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fff 0%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle { 
+      font-size: 15px; 
+      color: #64748B; 
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .hero-subtitle span { display: flex; align-items: center; gap: 6px; }
+    .hero-subtitle svg { width: 16px; height: 16px; color: #475569; }
+
+    /* ── STATS ─────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: -40px 0 32px;
+      position: relative;
+      z-index: 10;
+    }
+    .stat-card-v2 {
+      background: linear-gradient(135deg, rgba(30,32,48,.95), rgba(20,22,38,.98));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      text-align: center;
+      transition: all .3s cubic-bezier(.4,0,.2,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card-v2:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 30px rgba(99,102,241,.15);
+    }
+    .stat-card-v2::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 3px;
+      border-radius: 0 0 4px 4px;
+    }
+    .stat-card-v2.blue::before { background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+    .stat-card-v2.green::before { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+    .stat-card-v2.amber::before { background: linear-gradient(90deg, transparent, var(--amber), transparent); }
+    .stat-card-v2.purple::before { background: linear-gradient(90deg, transparent, var(--purple), transparent); }
+    .stat-icon-lg {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+    }
+    .stat-icon-lg svg { width: 26px; height: 26px; }
+    .stat-icon-lg.blue { background: var(--accent-dim); color: var(--accent-light); }
+    .stat-icon-lg.green { background: var(--green-dim); color: var(--green); }
+    .stat-icon-lg.amber { background: var(--amber-dim); color: var(--amber); }
+    .stat-icon-lg.purple { background: var(--purple-dim); color: var(--purple); }
+    .stat-value { font-size: 32px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 4px; }
+    .stat-value.blue { color: var(--accent-light); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.amber { color: var(--amber); }
+    .stat-value.purple { color: var(--purple); }
+    .stat-label { font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+
+    /* ── MAIN CONTENT ─────────────────────────────────── */
+    .main-content { padding: 0 0 60px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title svg { width: 22px; height: 22px; color: var(--accent-light); }
+
+    /* ── TABS ─────────────────────────────────── */
+    .tabs-v2 {
+      display: flex;
+      gap: 8px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r-lg);
+      padding: 6px;
+      margin-bottom: 28px;
+      width: fit-content;
+    }
+    .tab-v2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--r-sm);
+      font-family: var(--jk);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      background: transparent;
+      color: #64748B;
+    }
+    .tab-v2 svg { width: 18px; height: 18px; }
+    .tab-v2:hover { color: #CBD5E1; }
+    .tab-v2.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(99,102,241,.3);
+    }
+
+    /* ── QUIZ CARDS ─────────────────────────────────── */
+    .quiz-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .quiz-card-v2 {
+      background: linear-gradient(135deg, rgba(30,32,48,.9), rgba(20,22,38,.95));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      transition: all .3s cubic-bezier(.4,0,.2,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .quiz-card-v2::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .quiz-card-v2:hover {
+      border-color: rgba(99,102,241,.3);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.3);
+    }
+    .quiz-card-v2:hover::before { opacity: 1; }
+    .quiz-card-v2.completed {
+      border-color: rgba(52,211,153,.2);
+    }
+    .quiz-card-v2.completed::before {
+      background: var(--green);
+      opacity: 0.5;
+    }
+    .qc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .qc-subject { 
+      font-size: 11px; 
+      font-weight: 700; 
+      color: var(--accent-light); 
+      text-transform: uppercase; 
+      letter-spacing: .06em; 
+      background: var(--accent-dim);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .qc-title { 
+      font-size: 18px; 
+      font-weight: 700; 
+      color: #fff;
+      margin-bottom: 8px;
+      letter-spacing: -.01em;
+    }
+    .qc-desc { 
+      font-size: 13px; 
+      color: #64748B; 
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .qc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .qc-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #94A3B8;
+      background: rgba(255,255,255,.04);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+    .qc-meta-item svg { width: 16px; height: 16px; color: #475569; }
+    .qc-progress { margin-bottom: 16px; }
+    .qc-progress-bar {
+      height: 8px;
+      background: rgba(255,255,255,.06);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .qc-progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+    .qc-progress-info { display: flex; justify-content: space-between; font-size: 12px; }
+    .qc-progress-score { font-weight: 700; }
+    .qc-progress-grade { color: #64748B; }
+    .qc-footer { display: flex; gap: 10px; }
+
+    /* ── BUTTONS ─────────────────────────────────── */
+    .btn-primary-v2 {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #6366F1, #4F46E5);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--jk);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      box-shadow: 0 4px 12px rgba(99,102,241,.3);
+    }
+    .btn-primary-v2:hover {
+      background: linear-gradient(135deg, #7C7FF2, #6366F1);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(99,102,241,.4);
+    }
+    .btn-primary-v2 svg { width: 18px; height: 18px; }
+    .btn-secondary-v2 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,.05);
+      color: #94A3B8;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      font-family: var(--jk);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-secondary-v2:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .btn-secondary-v2 svg { width: 16px; height: 16px; }
+    .btn-success-v2 {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(52,211,153,.2);
+    }
+    .btn-success-v2:hover { background: rgba(52,211,153,.2); }
+
+    /* ── ACHIEVEMENTS ─────────────────────────────────── */
+    .achievements-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .achievement-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(30,32,48,.9), rgba(20,22,38,.95));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r);
+      padding: 14px 18px;
+      min-width: 200px;
+      transition: all .2s;
+    }
+    .achievement-badge:hover {
+      border-color: rgba(99,102,241,.3);
+      transform: translateY(-2px);
+    }
+    .achievement-badge.locked {
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+    .achievement-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .achievement-icon svg { width: 24px; height: 24px; }
+    .achievement-icon.gold { background: linear-gradient(135deg, rgba(251,191,36,.2), rgba(251,191,36,.1)); color: var(--amber); }
+    .achievement-icon.silver { background: rgba(255,255,255,.06); color: #94A3B8; }
+    .achievement-icon.bronze { background: rgba(180,83,9,.15); color: #F97316; }
+    .achievement-info { flex: 1; min-width: 0; }
+    .achievement-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .achievement-desc { font-size: 11px; color: #64748B; }
+
+    /* ── RESULTS TABLE ─────────────────────────────────── */
+    .results-card {
+      background: linear-gradient(135deg, rgba(30,32,48,.9), rgba(20,22,38,.95));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      overflow: hidden;
+    }
+    .results-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    .results-table thead th {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #475569;
+      padding: 8px 16px;
+      text-align: left;
+    }
+    .results-table tbody tr {
+      background: rgba(255,255,255,.02);
+      transition: all .15s;
+      border-radius: 10px;
+    }
+    .results-table tbody tr:hover { background: var(--accent-dim); }
+    .results-table tbody td {
+      padding: 16px;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    .results-table tbody td:first-child { border-radius: 10px 0 0 10px; }
+    .results-table tbody td:last-child { border-radius: 0 10px 10px 0; }
+    .rt-quiz-title { font-weight: 600; color: #fff; margin-bottom: 2px; }
+    .rt-quiz-subject { font-size: 12px; color: #64748B; }
+    .rt-score { font-family: var(--mono); color: #94A3B8; }
+    .rt-pct { font-weight: 700; font-size: 15px; }
+
+    /* ── BADGES ─────────────────────────────────── */
+    .badge-v2 { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 50px; }
+    .badge-v2.green { background: var(--green-dim); color: var(--green); }
+    .badge-v2.amber { background: var(--amber-dim); color: var(--amber); }
+    .badge-v2.purple { background: var(--purple-dim); color: var(--purple); }
+    .badge-v2.blue { background: var(--accent-dim); color: var(--accent-light); }
+    .badge-v2.red { background: var(--red-dim); color: var(--red); }
+
+    /* ── EMPTY STATE ─────────────────────────────────── */
+    .empty-state-v2 {
+      text-align: center;
+      padding: 60px 24px;
+      background: linear-gradient(135deg, rgba(30,32,48,.9), rgba(20,22,38,.95));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r-lg);
+    }
+    .empty-icon-v2 {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .empty-icon-v2 svg { width: 36px; height: 36px; color: var(--accent-light); }
+    .empty-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .empty-desc { font-size: 14px; color: #64748B; max-width: 300px; margin: 0 auto; }
+
+    /* ── RESPONSIVE ─────────────────────────────────── */
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr; margin-top: 0; }
+      .hero-title { font-size: 24px; }
+      .quiz-grid { grid-template-columns: 1fr; }
+      .tabs-v2 { width: 100%; }
+      .tab-v2 { flex: 1; justify-content: center; font-size: 13px; padding: 10px 12px; }
+    }
+
+    /* ── LEADERBOARD ─────────────────────────────────── */
+    .leaderboard-card {
+      background: linear-gradient(135deg, rgba(30,32,48,.9), rgba(20,22,38,.95));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+    .leaderboard-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .leaderboard-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(251,191,36,.2), rgba(251,191,36,.1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--amber);
+    }
+    .leaderboard-icon svg { width: 22px; height: 22px; }
+    .leaderboard-title { font-size: 16px; font-weight: 700; color: #fff; }
+    .leaderboard-subtitle { font-size: 12px; color: #64748B; }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      transition: background .15s;
+    }
+    .lb-row:hover { background: rgba(255,255,255,.03); }
+    .lb-rank {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .lb-rank.gold { background: linear-gradient(135deg, rgba(251,191,36,.3), rgba(251,191,36,.1)); color: var(--amber); }
+    .lb-rank.silver { background: rgba(255,255,255,.08); color: #94A3B8; }
+    .lb-rank.bronze { background: rgba(180,83,9,.15); color: #F97316; }
+    .lb-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .lb-info { flex: 1; min-width: 0; }
+    .lb-name { font-weight: 600; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-class { font-size: 12px; color: #64748B; }
+    .lb-score { text-align: right; }
+    .lb-grade { font-size: 18px; font-weight: 800; }
+    .lb-label { font-size: 10px; color: #64748B; text-transform: uppercase; }
+
+    /* ── ANIMATIONS ─────────────────────────────────── */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .fade-up { animation: fadeUp .4s ease forwards; }
+    .delay-1 { animation-delay: .1s; opacity: 0; }
+    .delay-2 { animation-delay: .2s; opacity: 0; }
+    .delay-3 { animation-delay: .3s; opacity: 0; }
   </style>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="wrap">
-      <a class="nb-brand" href="/student"><span class="nb-logo">📚</span><span class="nb-title">KvizMajstor</span></a>
-      <div class="nb-right">
-        <span class="badge badge-blue">🎓 Učenik</span>
-        <span class="nb-user" id="nb-email"></span>
-        <button class="btn btn-ghost btn-sm" id="logout-btn">Odjava</button>
+
+<!-- HERO SECTION -->
+<section class="hero">
+  <div class="wrap hero-content">
+    <div class="hero-greeting" id="greeting-time">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Dobro jutro
+    </div>
+    <h1 class="hero-title" id="hero-name">Učenik</h1>
+    <div class="hero-subtitle" id="hero-info">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> <span id="user-razred">—</span></span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> <span id="user-smjer">—</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS ROW -->
+<div class="wrap">
+  <div class="stats-row">
+    <div class="stat-card-v2 blue fade-up delay-1">
+      <div class="stat-icon-lg blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
+      <div class="stat-value blue" id="s-avail">—</div>
+      <div class="stat-label">Dostupnih kvizova</div>
     </div>
-  </nav>
-
-  <div class="wrap pg">
-    <div style="margin-bottom:22px">
-      <h1 style="font-family:var(--fd);font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px">Zdravo! 👋</h1>
-      <p style="font-size:13.5px;color:var(--text2)" id="greeting-sub">Učitavanje...</p>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-v" id="s-avail"  style="color:var(--accent)">—</div><div class="stat-l">Dostupnih kvizova</div></div>
-      <div class="stat-card"><div class="stat-v" id="s-done"   style="color:var(--green)">—</div><div class="stat-l">Riješenih</div></div>
-      <div class="stat-card"><div class="stat-v" id="s-avg"    style="color:var(--amber)">—</div><div class="stat-l">Prosječan rezultat</div></div>
-      <div class="stat-card"><div class="stat-v" id="s-best"   style="color:var(--purple)">—</div><div class="stat-l">Najbolja ocjena</div></div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab active" data-tab="quizzes">📝 Dostupni kvizovi</button>
-      <button class="tab" data-tab="my-results">📊 Moji rezultati</button>
-    </div>
-
-    <div id="tab-quizzes">
-      <div class="qg" id="quizzes-grid"><p style="color:var(--text3)">Učitavanje...</p></div>
-    </div>
-
-    <div id="tab-my-results" style="display:none">
-      <div class="card">
-        <div class="sec-title">Moji rezultati</div>
-        <div style="overflow-x:auto" id="my-results-wrap"></div>
+    <div class="stat-card-v2 green fade-up delay-2">
+      <div class="stat-icon-lg green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       </div>
+      <div class="stat-value green" id="s-done">—</div>
+      <div class="stat-label">Riješenih kvizova</div>
+    </div>
+    <div class="stat-card-v2 amber fade-up delay-3">
+      <div class="stat-icon-lg amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      </div>
+      <div class="stat-value amber" id="s-avg">—</div>
+      <div class="stat-label">Prosječan rezultat</div>
+    </div>
+    <div class="stat-card-v2 purple fade-up delay-3">
+      <div class="stat-icon-lg purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div class="stat-value purple" id="s-best">—</div>
+      <div class="stat-label">Najbolja ocjena</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="wrap main-content">
+  <!-- ACHIEVEMENTS -->
+  <div class="achievements-row" id="achievements-row"></div>
+
+  <!-- TABS -->
+  <div class="tabs-v2">
+    <button class="tab-v2 active" data-tab="quizzes" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Dostupni kvizovi
+    </button>
+    <button class="tab-v2" data-tab="results" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Moji rezultati
+    </button>
+    <button class="tab-v2" data-tab="leaderboard" onclick="switchTab(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+      Rang lista
+    </button>
+  </div>
+
+  <!-- TAB: QUIZZES -->
+  <div id="tab-quizzes">
+    <div class="section-header">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Dostupni kvizovi
+      </h2>
+    </div>
+    <div class="quiz-grid" id="quizzes-grid"></div>
+  </div>
+
+  <!-- TAB: RESULTS -->
+  <div id="tab-results" style="display:none">
+    <div class="section-header">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Moji rezultati
+      </h2>
+    </div>
+    <div class="results-card">
+      <div id="my-results-wrap"></div>
     </div>
   </div>
 
-  <script type="module">
-    import { auth, db } from '/js/firebase-config.js';
-    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { collection, getDocs, doc, getDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { toast, gradeBadge, fmtDate, pctColor } from '/js/utils.js';
+  <!-- TAB: LEADERBOARD -->
+  <div id="tab-leaderboard" style="display:none">
+    <div class="section-header">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        Rang lista — Top 10 učenika
+      </h2>
+    </div>
+    <div class="leaderboard-card">
+      <div id="leaderboard-list"></div>
+    </div>
+  </div>
+</div>
 
-    let myResults=[], uid=null, userData=null;
+<script type="module">
+  import { auth, db } from '/js/firebase-config.js';
+  import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { collection, getDocs, doc, getDoc, query, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { toast, gradeBadge, fmtDate, pctColor } from '/js/utils.js';
 
-    onAuthStateChanged(auth, async (u) => {
-      if (!u) { window.location.href='/login'; return; }
-      if (!u.emailVerified) { await signOut(auth); window.location.href='/login'; return; }
-      uid = u.uid;
-      document.getElementById('nb-email').textContent = u.email;
-      const snap = await getDoc(doc(db,'users',u.uid));
-      userData = snap.data();
-      if (userData?.role==='admin') { window.location.href='/admin'; return; }
-      document.getElementById('greeting-sub').textContent =
-        `${userData?.displayName||u.email.split('@')[0]} · Razred: ${userData?.razred||'—'} · ${userData?.smjer||''}`;
-      await loadData();
-    });
+  let myResults = [], uid = null, userData = null;
+  let allResults = [], allStudents = [];
 
-    document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
+  onAuthStateChanged(auth, async (u) => {
+    if (!u) { window.location.href = '/login'; return; }
+    if (!u.emailVerified) { await signOut(auth); window.location.href = '/login'; return; }
+    uid = u.uid;
+    const snap = await getDoc(doc(db, 'users', u.uid));
+    userData = snap.data();
+    if (userData?.role === 'admin') { window.location.href = '/admin'; return; }
+    
+    setGreeting();
+    document.getElementById('hero-name').textContent = userData?.displayName || u.email.split('@')[0];
+    document.getElementById('user-razred').textContent = userData?.razred || 'Nepoznat razred';
+    document.getElementById('user-smjer').textContent = userData?.smjer || 'Svi smjerovi';
+    
+    await loadData();
+  });
 
-    document.querySelectorAll('.tab').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('tab-quizzes').style.display    = btn.dataset.tab==='quizzes'    ?'block':'none';
-        document.getElementById('tab-my-results').style.display = btn.dataset.tab==='my-results' ?'block':'none';
-      };
-    });
+  function setGreeting() {
+    const hour = new Date().getHours();
+    const el = document.getElementById('greeting-time');
+    let greeting = 'Dobro jutro';
+    let icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+    
+    if (hour >= 12 && hour < 18) {
+      greeting = 'Dobar dan';
+      icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/></svg>';
+    } else if (hour >= 18 || hour < 5) {
+      greeting = 'Dobra večer';
+      icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    }
+    el.innerHTML = icon + greeting;
+  }
 
-    async function loadData() {
-      const [qSnap,rSnap] = await Promise.all([
-        getDocs(query(collection(db,'quizzes'), where('status','==','active'))),
-        getDocs(query(collection(db,'results'),  where('userId','==',uid)))
-      ]);
-      const quizzes = qSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-      myResults = rSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt));
+  window.switchTab = (btn) => {
+    document.querySelectorAll('.tab-v2').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tab-quizzes').style.display = tab === 'quizzes' ? 'block' : 'none';
+    document.getElementById('tab-results').style.display = tab === 'results' ? 'block' : 'none';
+    document.getElementById('tab-leaderboard').style.display = tab === 'leaderboard' ? 'block' : 'none';
+  };
 
-      const doneMap = {};
-      myResults.forEach(r=>doneMap[r.quizId]=r);
+  document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = '/login');
 
-      const avg  = myResults.length ? Math.round(myResults.reduce((s,r)=>s+(r.percentage||0),0)/myResults.length) : 0;
-      const best = myResults.length ? Math.max(...myResults.map(r=>r.grade)) : 0;
-      document.getElementById('s-avail').textContent = quizzes.length;
-      document.getElementById('s-done').textContent  = myResults.length;
-      document.getElementById('s-avg').textContent   = avg+'%';
-      document.getElementById('s-best').textContent  = best>0?best+'/5':'—';
+  async function loadData() {
+    const [qSnap, rSnap, allRSnap, allUSnap] = await Promise.all([
+      getDocs(query(collection(db, 'quizzes'), where('status', '==', 'active'))),
+      getDocs(query(collection(db, 'results'), where('userId', '==', uid))),
+      getDocs(collection(db, 'results')),
+      getDocs(collection(db, 'users'))
+    ]);
 
-      // Quiz cards
-      const grid = document.getElementById('quizzes-grid');
-      if (!quizzes.length) {
-        grid.innerHTML=`<div class="card empty" style="grid-column:1/-1"><div class="empty-icon">⏳</div><h3>Nema dostupnih kvizova</h3><p>Nastavnik još nije aktivirao nijedan kviz.</p></div>`;
-      } else {
-        grid.innerHTML = quizzes.map(q=>{
-          const mr = doneMap[q.id];
-          const done = !!mr;
-          return `<div class="card qcard">
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <div class="qcard-subj">${q.subject||'Kviz'}</div>
-              ${done ? gradeBadge(mr.grade,mr.gradeLabel) : '<span class="badge badge-blue">Dostupan</span>'}
-            </div>
-            <div class="qcard-title">${q.title}</div>
-            <div class="qcard-desc">${q.description||''}</div>
-            <div class="qcard-meta">
-              <span>❓ ${q.numQuestions} pitanja</span>
-              <span>⏱ ${q.timeLimit||30} min</span>
-              <span>⚡ ${q.difficulty}</span>
-            </div>
-            ${done && mr ? `<div style="display:flex;flex-direction:column;gap:5px">
-              <div class="prog-bar"><div class="prog-fill" style="width:${mr.percentage}%"></div></div>
-              <span style="font-size:12px;color:var(--text2)">${mr.percentage}% — ${mr.gradeLabel}</span>
-            </div>` : ''}
-            ${done
-              ? `<div class="locked-bar">🔒 Kviz je završen · <button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?id=${mr.id}'">Pogledaj rezultat</button></div>`
-              : `<button class="btn btn-primary btn-full" onclick="startQuiz('${q.id}')">▶ Počni kviz</button>`
-            }
-          </div>`;
-        }).join('');
-      }
+    const quizzes = qSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    myResults = rSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+    
+    allResults = allRSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allStudents = allUSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.role === 'student');
 
-      // Results table
-      const rWrap = document.getElementById('my-results-wrap');
-      if (!myResults.length) { rWrap.innerHTML='<p style="color:var(--text3);font-size:13.5px;padding:20px 0;text-align:center">Još niste riješili nijedan kviz</p>'; return; }
-      rWrap.innerHTML = `<table class="tbl">
-        <thead><tr><th>Kviz</th><th>Bodovi</th><th>%</th><th>Ocjena</th><th>Datum</th><th></th></tr></thead>
-        <tbody>${myResults.map(r=>`<tr>
-          <td style="color:var(--text);font-weight:500">${r.quizTitle}</td>
-          <td style="font-family:var(--fm);font-size:12px">${r.earnedPoints}/${r.totalPoints}</td>
-          <td style="color:${pctColor(r.percentage)};font-weight:600">${r.percentage}%</td>
-          <td>${gradeBadge(r.grade,r.gradeLabel)}</td>
-          <td>${fmtDate(r.completedAt)}</td>
-          <td><button class="btn btn-ghost btn-sm" onclick="window.location.href='/result?id=${r.id}'">Detalji</button></td>
-        </tr>`).join('')}</tbody>
-      </table>`;
+    const doneMap = {};
+    myResults.forEach(r => doneMap[r.quizId] = r);
+
+    const avg = myResults.length ? Math.round(myResults.reduce((s, r) => s + (r.percentage || 0), 0) / myResults.length) : 0;
+    const best = myResults.length ? Math.max(...myResults.map(r => r.grade)) : 0;
+
+    document.getElementById('s-avail').textContent = quizzes.length;
+    document.getElementById('s-done').textContent = myResults.length;
+    document.getElementById('s-avg').textContent = avg > 0 ? avg + '%' : '—';
+    document.getElementById('s-best').textContent = best > 0 ? best + '/5' : '—';
+
+    renderAchievements();
+    renderQuizzes(quizzes, doneMap);
+    renderResults();
+    renderLeaderboard();
+  }
+
+  function renderAchievements() {
+    const achievements = [
+      { id: 'first-quiz', name: 'Prvi korak', desc: 'Riješi prvi kviz', icon: 'rocket', color: 'gold', condition: myResults.length >= 1 },
+      { id: 'five-quizzes', name: 'Redovni učenik', desc: 'Riješi 5 kvizova', icon: 'star', color: 'gold', condition: myResults.length >= 5 },
+      { id: 'ten-quizzes', name: 'Kvizaš', desc: 'Riješi 10 kvizova', icon: 'trophy', color: 'gold', condition: myResults.length >= 10 },
+      { id: 'perfect-score', name: 'Savršen', desc: 'Osvoji 100%', icon: 'zap', color: 'gold', condition: myResults.some(r => r.percentage >= 100) },
+      { id: 'high-performer', name: 'Odličan učenik', desc: 'Prosjek iznad 90%', icon: 'award', color: 'silver', condition: myResults.length >= 3 && myResults.reduce((s, r) => s + r.percentage, 0) / myResults.length >= 90 },
+    ];
+
+    const html = achievements.map(a => `
+      <div class="achievement-badge ${a.condition ? '' : 'locked'}">
+        <div class="achievement-icon ${a.color}">
+          ${getAchievementIcon(a.icon)}
+        </div>
+        <div class="achievement-info">
+          <div class="achievement-name">${a.name}</div>
+          <div class="achievement-desc">${a.desc}</div>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('achievements-row').innerHTML = html;
+  }
+
+  function getAchievementIcon(type) {
+    const icons = {
+      rocket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>',
+      star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+      zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+      award: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>'
+    };
+    return icons[type] || icons.star;
+  }
+
+  function renderQuizzes(quizzes, doneMap) {
+    const grid = document.getElementById('quizzes-grid');
+    
+    if (!quizzes.length) {
+      grid.innerHTML = `
+        <div class="empty-state-v2" style="grid-column: 1/-1">
+          <div class="empty-icon-v2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="empty-title">Nema dostupnih kvizova</div>
+          <div class="empty-desc">Nastavnik još nije aktivirao nijedan kviz. Provjerite kasnije!</div>
+        </div>`;
+      return;
     }
 
-    window.startQuiz = (id) => { window.location.href = '/take-quiz?id='+id; };
-  </script>
+    grid.innerHTML = quizzes.map(q => {
+      const mr = doneMap[q.id];
+      const done = !!mr;
+      const pctColorVal = mr ? (mr.percentage >= 80 ? '#34D399' : mr.percentage >= 60 ? '#FBBF24' : '#F87171') : '#6366F1';
+
+      return `
+        <div class="quiz-card-v2 ${done ? 'completed' : ''}">
+          <div class="qc-header">
+            <span class="qc-subject">${q.subject || 'Kviz'}</span>
+            ${done
+              ? `<span class="badge-v2 ${mr.grade >= 4 ? 'green' : mr.grade >= 3 ? 'amber' : 'red'}">${gradeBadge(mr.grade, mr.gradeLabel)}</span>`
+              : '<span class="badge-v2 blue">Dostupan</span>'
+            }
+          </div>
+          <div class="qc-title">${q.title}</div>
+          <div class="qc-desc">${q.description || 'Bez opisa'}</div>
+          <div class="qc-meta">
+            <span class="qc-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              ${q.numQuestions} pitanja
+            </span>
+            <span class="qc-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              ${q.timeLimit || 30} min
+            </span>
+            <span class="qc-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              ${q.difficulty}
+            </span>
+          </div>
+          ${done && mr ? `
+            <div class="qc-progress">
+              <div class="qc-progress-bar">
+                <div class="qc-progress-fill" style="width:${mr.percentage}%;background:${pctColorVal}"></div>
+              </div>
+              <div class="qc-progress-info">
+                <span class="qc-progress-score" style="color:${pctColorVal}">${mr.percentage}%</span>
+                <span class="qc-progress-grade">${mr.gradeLabel}</span>
+              </div>
+            </div>
+            <div class="qc-footer">
+              <button class="btn-secondary-v2" onclick="window.location.href='/result?id=${mr.id}'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Pogledaj
+              </button>
+            </div>
+          ` : `
+            <div class="qc-footer">
+              <button class="btn-primary-v2" onclick="startQuiz('${q.id}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Počni kviz
+              </button>
+            </div>
+          `}
+        </div>`;
+    }).join('');
+  }
+
+  function renderResults() {
+    const wrap = document.getElementById('my-results-wrap');
+    
+    if (!myResults.length) {
+      wrap.innerHTML = `
+        <div class="empty-state-v2">
+          <div class="empty-icon-v2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div class="empty-title">Još nema rezultata</div>
+          <div class="empty-desc">Riješite prvi kviz da vidite svoje rezultate ovdje.</div>
+        </div>`;
+      return;
+    }
+
+    wrap.innerHTML = `
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Kviz</th>
+            <th>Bodovi</th>
+            <th>Rezultat</th>
+            <th>Ocjena</th>
+            <th>Datum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${myResults.map(r => {
+            const pctColorVal = pctColor(r.percentage);
+            return `
+              <tr>
+                <td>
+                  <div class="rt-quiz-title">${r.quizTitle}</div>
+                  <div class="rt-quiz-subject">${r.quizSubject || ''}</div>
+                </td>
+                <td class="rt-score">${r.earnedPoints}/${r.totalPoints}</td>
+                <td><span class="rt-pct" style="color:${pctColorVal}">${r.percentage}%</span></td>
+                <td>${gradeBadge(r.grade, r.gradeLabel)}</td>
+                <td style="color:#475569;font-size:13px;font-family:var(--mono)">${fmtDate(r.completedAt)}</td>
+                <td>
+                  <button class="btn-secondary-v2" onclick="window.location.href='/result?id=${r.id}'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Detalji
+                  </button>
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function renderLeaderboard() {
+    const studentStats = allStudents.map(s => {
+      const sr = allResults.filter(r => r.userId === s.id);
+      const avgGrade = sr.length ? sr.reduce((sum, r) => sum + r.grade, 0) / sr.length : 0;
+      const totalQuizzes = sr.length;
+      return { ...s, avgGrade, totalQuizzes };
+    })
+    .filter(s => s.totalQuizzes > 0)
+    .sort((a, b) => b.avgGrade - a.avgGrade || b.totalQuizzes - a.totalQuizzes)
+    .slice(0, 10);
+
+    const myRank = studentStats.findIndex(s => s.id === uid) + 1;
+
+    const wrap = document.getElementById('leaderboard-list');
+    
+    if (!studentStats.length) {
+      wrap.innerHTML = `
+        <div class="empty-state-v2">
+          <div class="empty-icon-v2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/></svg>
+          </div>
+          <div class="empty-title">Nema podataka</div>
+          <div class="empty-desc">Još niko nije riješio kviz. Budite prvi!</div>
+        </div>`;
+      return;
+    }
+
+    wrap.innerHTML = studentStats.map((s, i) => {
+      const rank = i + 1;
+      const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+      const gradeColor = s.avgGrade >= 4.5 ? '#FBBF24' : s.avgGrade >= 3.5 ? '#34D399' : '#94A3B8';
+      const isMe = s.id === uid;
+
+      return `
+        <div class="lb-row" style="${isMe ? 'background: var(--accent-dim); border: 1px solid rgba(99,102,241,.3); border-radius: 10px;' : ''}">
+          <div class="lb-rank ${rankClass}">${rank}</div>
+          <div class="lb-avatar">${(s.displayName || '?')[0].toUpperCase()}</div>
+          <div class="lb-info">
+            <div class="lb-name">${s.displayName || '—'} ${isMe ? '(Vi)' : ''}</div>
+            <div class="lb-class">${s.razred || '—'} · ${s.totalQuizzes} kvizova</div>
+          </div>
+          <div class="lb-score">
+            <div class="lb-grade" style="color:${gradeColor}">${s.avgGrade.toFixed(1)}</div>
+            <div class="lb-label">prosj. ocjena</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  window.startQuiz = (id) => { window.location.href = '/take-quiz?id=' + id; };
+</script>
 </body>
 </html>
