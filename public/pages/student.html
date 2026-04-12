@@ -684,7 +684,23 @@
     document.getElementById('user-smjer').textContent = userData?.smjer || 'Svi smjerovi';
     
     await loadData();
+    initEventListeners();
   });
+
+  function initEventListeners() {
+    document.addEventListener('click', (e) => {
+      const startBtn = e.target.closest('.btn-start-quiz');
+      if (startBtn) {
+        const id = startBtn.dataset.quizId;
+        window.location.href = '/take-quiz?id=' + id;
+      }
+      const viewBtn = e.target.closest('.btn-view-result');
+      if (viewBtn) {
+        const id = viewBtn.dataset.resultId;
+        window.location.href = '/result?id=' + id;
+      }
+    });
+  }
 
   function setGreeting() {
     const hour = new Date().getHours();
@@ -838,14 +854,14 @@
               </div>
             </div>
             <div class="qc-footer">
-              <button class="btn-secondary-v2" onclick="window.location.href='/result?id=${mr.id}'">
+              <button class="btn-secondary-v2 btn-view-result" data-result-id="${mr.id}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 Pogledaj
               </button>
             </div>
           ` : `
             <div class="qc-footer">
-              <button class="btn-primary-v2" onclick="startQuiz('${q.id}')">
+              <button class="btn-primary-v2 btn-start-quiz" data-quiz-id="${q.id}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Počni kviz
               </button>
@@ -896,7 +912,7 @@
                 <td>${gradeBadge(r.grade, r.gradeLabel)}</td>
                 <td style="color:#475569;font-size:13px;font-family:var(--mono)">${fmtDate(r.completedAt)}</td>
                 <td>
-                  <button class="btn-secondary-v2" onclick="window.location.href='/result?id=${r.id}'">
+                  <button class="btn-secondary-v2 btn-view-result" data-result-id="${r.id}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     Detalji
                   </button>
@@ -956,7 +972,7 @@
     }).join('');
   }
 
-  window.startQuiz = (id) => { window.location.href = '/take-quiz?id=' + id; };
+
 </script>
 </body>
 </html>
