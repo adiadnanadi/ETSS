@@ -53,6 +53,13 @@ app.get('/result',      (req, res) => res.sendFile(path.join(__dirname, 'public/
 // ── API: HEALTH ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// ── PREVIEW: RAZREDNI PREGLED (demo podaci, bez prijave) ─────────────────────
+// Prikazuje novi izvještaj po odjeljenjima na fiksnim podacima.
+app.get('/preview/razredni-pregled', (req, res) =>
+  res.redirect('/admin?demo=1&cr=1'));
+app.get('/preview/razredni-pregled.html', (req, res) =>
+  res.redirect('/admin?demo=1&cr=1'));
+
 // ── API: DELETE USER ─────────────────────────────────────────────────────────
 app.delete('/api/admin/user/:uid', async (req, res) => {
   if (!adminAuth)

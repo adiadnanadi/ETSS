@@ -20,6 +20,27 @@ Sve se pokreće s jednog servera na Render.com — nema lokalnog builda.
 | `/student` | Lista kvizova za učenika |
 | `/take-quiz?id=...` | Rješavanje kviza s tajmerom |
 | `/result?id=...` | Pregled rezultata |
+| `/preview/razredni-pregled` | Prikaz novog "Razredi" izvještaja na demo podacima (bez prijave) |
+
+## Izvještaj po odjeljenjima (kartica "Razredi")
+Sažima sve učenike po razredu:
+- broj učenika, riješenih kvizova, prosječan % i prosječna ocjena odjeljenja
+- koliko je učenika prešlo prag (zadano 54% = Dovoljan, bira se u padajućem meniju)
+- vizuelni raspored ocjena 1–5 po odjeljenju i najbolji učenik
+- lista učenika koji još nijesu riješili nijedan kviz (klik → profil učenika)
+- CSV izvoz trenutno filtriranog prikaza
+
+Logika je odvojena u `public/js/class-report.js` (čiste funkcije, bez DOM-a i Firebasea),
+pa se može testirati bez servera. UI se vidi i bez prijave: `/admin?demo=1&cr=1`
+(preko `/preview/razredni-pregled`).
+
+## Testovi
+```bash
+npm test          # 16 jediničnih + 22 e2e (jsdom) — ne traži server ni Firebase
+```
+`tests/class-report.test.js` pokriva računanje izvještaja, `tests/e2e/admin-class-report.test.mjs`
+učitava **stvarni** inline modul iz `public/pages/admin.html` u jsdom DOM i provjerava render,
+filtere, prag polaganja, CSV izvoz, eskapiranje HTML-a i da ostale kartice rade.
 
 ## Setup
 

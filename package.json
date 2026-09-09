@@ -4,7 +4,11 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "node tests/class-report.test.js && node tests/e2e/admin-class-report.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
   },
   "dependencies": {
     "@mistralai/mistralai": "^1.3.6",

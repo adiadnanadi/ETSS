@@ -274,6 +274,36 @@
     .glow-accent::after { content: ''; position: absolute; inset: -2px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: inherit; opacity: 0; z-index: -1; filter: blur(12px); transition: opacity .3s; }
     .glow-accent:hover::after { opacity: 0.3; }
 
+    /* ── RAZREDNI PREGLED ─────────────────────────────────── */
+    .cr-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px; }
+    .cr-card {
+      background: linear-gradient(135deg,rgba(30,32,48,.7),rgba(20,22,38,.85));
+      border: 1px solid rgba(255,255,255,.06); border-radius: var(--r); padding: 16px 18px;
+      transition: all .25s cubic-bezier(.4,0,.2,1);
+    }
+    .cr-card:hover { border-color: rgba(255,255,255,.14); transform: translateY(-2px); }
+    .cr-card-v { font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1; margin-bottom: 6px; }
+    .cr-card-l { font-size: 10.5px; color: #64748B; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+    .cr-name { display: flex; align-items: center; gap: 10px; }
+    .cr-name-txt { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+    .cr-name-sub { font-size: 11.5px; color: #475569; margin-top: 2px; }
+    .cr-stack { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.05); min-width: 110px; }
+    .cr-seg { height: 100%; transition: flex-grow .4s cubic-bezier(.4,0,.2,1); }
+    .cr-seg.g5 { background: #FBBF24; } .cr-seg.g4 { background: #34D399; }
+    .cr-seg.g3 { background: #818CF8; } .cr-seg.g2 { background: #22D3EE; }
+    .cr-seg.g1 { background: #F87171; }
+    .cr-legend { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+    .cr-legend span { font-size: 10.5px; font-family: var(--mono); color: #64748B; }
+    .cr-legend b { font-weight: 700; }
+    .cr-mute { color: #475569; font-size: 12px; }
+    .cr-chip {
+      font-size: 11px; color: #94A3B8; background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.18); border-radius: 6px; padding: 2px 8px;
+      cursor: pointer; font-family: var(--jk); transition: all .15s;
+    }
+    .cr-chip:hover { background: rgba(248,113,113,.18); color: #fff; }
+    @media (max-width: 1100px) { .cr-cards { grid-template-columns: repeat(2, 1fr); } }
+
     /* ── MOBILE NAV ─────────────────────────────────── */
     .mobile-nav {
       display: none;
@@ -457,6 +487,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Učenici
     </button>
+    <button class="mobile-nav-item" data-page="classreport" onclick="switchPage(this); closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="13" y="6" width="3" height="11" rx="1"/></svg>
+      Razredi
+    </button>
   </div>
 </nav>
 
@@ -502,6 +536,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Učenici
     <span class="sb-badge" id="sb-stu-count">—</span>
+  </button>
+  <button class="sb-item" data-page="classreport" onclick="switchPage(this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="13" y="6" width="3" height="11" rx="1"/></svg>
+    Razredi
+    <span class="sb-badge green" id="sb-class-count">—</span>
   </button>
   <div style="flex:1"></div>
   <span class="sb-section">Akcije</span>
@@ -693,6 +732,63 @@
     </div>
   </div>
 
+  <!-- PAGE: CLASS REPORT -->
+  <div class="page" id="page-classreport">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Razredni pregled</div>
+        <div class="ph-sub" id="cr-sub">Uspjeh i aktivnost po odjeljenjima</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn2 btn2-ghost" onclick="exportClassReportCSV()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Izvezi CSV
+        </button>
+      </div>
+    </div>
+
+    <div class="cr-cards" id="cr-summary"></div>
+
+    <div class="card">
+      <div class="filter-bar">
+        <div class="search-wrap" style="max-width:280px">
+          <span class="search-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input class="search-input" id="cr-search" placeholder="Ime učenika ili razred..." oninput="renderClassReport()"/>
+        </div>
+        <select class="filter-select" id="cr-sort" onchange="renderClassReport()">
+          <option value="razred">Po razredu</option>
+          <option value="avg-desc">Najbolji prosjek</option>
+          <option value="avg-asc">Najlošiji prosjek</option>
+          <option value="pass-asc">Najslabiji uspjeh</option>
+          <option value="activity-desc">Najviše riješenih</option>
+          <option value="students-desc">Najviše učenika</option>
+        </select>
+        <select class="filter-select" id="cr-threshold" onchange="renderClassReport()">
+          <option value="54">Prag: Dovoljan (54%)</option>
+          <option value="37">Prag: Dovoljan niži (37%)</option>
+          <option value="70">Prag: Vrlo dobar (70%)</option>
+          <option value="84">Prag: Odličan (84%)</option>
+        </select>
+        <label class="cr-mute" style="display:flex;align-items:center;gap:7px;cursor:pointer">
+          <input type="checkbox" id="cr-only-active" onchange="renderClassReport()" style="accent-color:#6366F1;width:14px;height:14px"/>
+          Samo odjeljenja s rezultatima
+        </label>
+        <span class="filter-count" id="cr-count"></span>
+      </div>
+      <div class="tbl-wrap" id="cr-wrap"></div>
+    </div>
+
+    <div class="card" id="cr-inactive-card" style="margin-top:18px;display:none">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Učenici koji još nisu riješili nijedan kviz
+      </div>
+      <div id="cr-inactive-list"></div>
+    </div>
+  </div>
+
 </main>
 
 <!-- STUDENT DETAIL PANEL -->
@@ -840,30 +936,55 @@ import { auth, db } from '/js/firebase-config.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { toast, gradeBadge, fmtDate, pctColor, btnLoad, btnReset } from '/js/utils.js';
+import {
+  buildClassReport, sortClassRows, buildInactiveByClass,
+  classReportToCSV, fmtPct, fmtNum, UNASSIGNED_LABEL
+} from '/js/class-report.js';
+import { buildDemoData } from '/js/demo-data.js';
 
 let quizzes=[], results=[], users=[], allResults=[], allStudents=[];
+let crRows = [];   // zadnji renderirani redovi razrednog pregleda (za CSV izvoz)
 let editingQuiz = null;
 let editingStudentId = null;
 const ALL_RAZREDI = ["I-T5","II-S2","II-P","III-S1","III-T3","III-T5","III-T6","IV-T3","IV-T5"];
+// Mora biti DEKLARISANO prije loadAll() — loadAll ga čita na samom startu.
+const IS_DEMO = new URLSearchParams(location.search).has('demo');
 
-onAuthStateChanged(auth, async (u) => {
-  if (!u) { window.location.href='/login'; return; }
-  const snap = await getDoc(doc(db,'users',u.uid));
-  if (snap.data()?.role !== 'admin') { window.location.href='/student'; return; }
-  document.getElementById('nb-email').textContent = u.email;
+// ── DEMO MOD (?demo=1) ── pokreće se ISKLJUČIVO s parametrom, za pregled UI-a
+if (IS_DEMO) {
+  const d = buildDemoData();
+  quizzes = d.quizzes; results = d.results; users = d.students;
+  allResults = [...results]; allStudents = [...users];
+  window.__demo = { get students() { return allStudents; }, get results() { return results; } };
+  document.getElementById('nb-email').textContent = 'demo@pregled';
+  document.getElementById('logout-btn').style.display = 'none';
   await loadAll();
-});
+  // ?cr=1 → otvori odmah karticu "Razredi"
+  if (new URLSearchParams(location.search).get('cr') === '1') {
+    const tab = document.querySelector('.sb-item[data-page="classreport"]');
+    if (tab) switchPage(tab);
+  }
+} else {
+  onAuthStateChanged(auth, async (u) => {
+    if (!u) { window.location.href='/login'; return; }
+    const snap = await getDoc(doc(db,'users',u.uid));
+    if (snap.data()?.role !== 'admin') { window.location.href='/student'; return; }
+    document.getElementById('nb-email').textContent = u.email;
+    await loadAll();
+  });
+}
 
-document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
+const _signOut = () => { if (IS_DEMO) { location.href = location.pathname; return; } return signOut(auth).then(()=>window.location.href='/login'); };
+document.getElementById('logout-btn').onclick = _signOut;
+document.getElementById('mobile-logout-btn').onclick = _signOut;
 document.getElementById('modal').onclick = (e) => { if(e.target===document.getElementById('modal')) closeModal(); };
 document.getElementById('edit-modal').onclick = (e) => { if(e.target===document.getElementById('edit-modal')) closeEditModal(); };
 document.getElementById('edit-student-modal').onclick = (e) => { if(e.target===document.getElementById('edit-student-modal')) closeEditStudentModal(); };
-document.getElementById('mobile-logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
 
 function closeMobileNav() {}
 
 // Page switching
-window.switchPage = (btn) => {
+function switchPage(btn) {
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -871,18 +992,21 @@ window.switchPage = (btn) => {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+pg).classList.add('active');
   document.getElementById('student-detail').classList.remove('open');
-};
+}
+window.switchPage = switchPage;
 
 async function loadAll() {
   try {
-    const [qs,rs,us] = await Promise.all([
-      getDocs(query(collection(db,'quizzes'), orderBy('createdAt','desc'))),
-      getDocs(query(collection(db,'results'),  orderBy('completedAt','desc'))),
-      getDocs(collection(db,'users'))
-    ]);
-    quizzes = qs.docs.map(d=>({id:d.id,...d.data()}));
-    results = rs.docs.map(d=>({id:d.id,...d.data()}));
-    users   = us.docs.map(d=>({id:d.id,...d.data()}));
+    if (!IS_DEMO) {
+      const [qs,rs,us] = await Promise.all([
+        getDocs(query(collection(db,'quizzes'), orderBy('createdAt','desc'))),
+        getDocs(query(collection(db,'results'),  orderBy('completedAt','desc'))),
+        getDocs(collection(db,'users'))
+      ]);
+      quizzes = qs.docs.map(d=>({id:d.id,...d.data()}));
+      results = rs.docs.map(d=>({id:d.id,...d.data()}));
+      users   = us.docs.map(d=>({id:d.id,...d.data()}));
+    }
     allResults  = [...results];
     allStudents = users.filter(u=>u.role==='student');
     populateFilters();
@@ -891,7 +1015,8 @@ async function loadAll() {
     renderQuizzes();
     filterResults();
     filterStudents();
-  } catch(e) { toast('Greška: '+e.message,'error'); }
+    renderClassReport();
+  } catch(e) { toast('Greška: '+esc(e.message),'error'); }
 }
 
 function populateFilters() {
@@ -990,7 +1115,7 @@ function renderOverview() {
 }
 
 // ── QUIZZES ──
-window.filterQuizzes = () => {
+function filterQuizzes() {
   const search = document.getElementById('q-search').value.toLowerCase();
   const status = document.getElementById('q-status').value;
   const diff   = document.getElementById('q-difficulty').value;
@@ -1054,7 +1179,7 @@ function renderQuizzes(list) {
 }
 
 // ── RESULTS ──
-window.filterResults = () => {
+function filterResults() {
   const search  = document.getElementById('r-search').value.toLowerCase();
   const razred  = document.getElementById('r-razred').value;
   const predmet = document.getElementById('r-predmet').value;
@@ -1114,7 +1239,7 @@ function renderResults(list) {
 }
 
 // ── STUDENTS ──
-window.filterStudents = () => {
+function filterStudents() {
   const search = document.getElementById('s-search').value.toLowerCase();
   const razred = document.getElementById('s-razred').value;
   const smjer  = document.getElementById('s-smjer').value;
@@ -1143,6 +1268,172 @@ window.filterStudents = () => {
   document.getElementById('s-count').textContent = `${filtered.length} učenika`;
   renderStudents(filtered);
 };
+
+// ── RAZREDNI PREGLED ──
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function renderClassReport() {
+  const search    = (document.getElementById('cr-search').value || '').trim().toLowerCase();
+  const sort      = document.getElementById('cr-sort').value;
+  const threshold = parseInt(document.getElementById('cr-threshold').value, 10);
+  const onlyActive= document.getElementById('cr-only-active').checked;
+
+  let students = allStudents;
+  let keepRazrede = null;
+  if (search) {
+    const matched = allStudents.filter(s =>
+      (s.displayName || '').toLowerCase().includes(search) ||
+      (s.email || '').toLowerCase().includes(search));
+    // hit po imenu/emailu → filtrira se po razredu; hit samo po nazivu razreda → po razredu
+    if (matched.length) keepRazrede = new Set(matched.map(s => s.razred || UNASSIGNED_LABEL));
+    const razredHit = new Set(
+      [...new Set(allStudents.map(s => s.razred).filter(Boolean))]
+        .filter(r => r.toLowerCase().includes(search))
+    );
+    if (razredHit.size) {
+      keepRazrede = keepRazrede ? new Set([...keepRazrede, ...razredHit]) : razredHit;
+    }
+    if (!keepRazrede || !keepRazrede.size) { students = []; }
+    else {
+      students = allStudents.filter(s => keepRazrede.has(s.razred || UNASSIGNED_LABEL));
+    }
+  }
+
+  const ids = new Set(students.map(s => s.id));
+  const rpt = buildClassReport(students, results, { passThreshold: threshold });
+  let rows  = rpt.rows;
+  if (onlyActive) rows = rows.filter(r => r.resultCount > 0);
+  rows = sortClassRows(rows, sort);
+  crRows = rows;
+
+  renderClassSummary(rpt.summary, rows);
+  document.getElementById('sb-class-count').textContent = rpt.rows.length;
+  document.getElementById('cr-count').textContent =
+    `${rows.length} ${rows.length === 1 ? 'odjeljenje' : 'odjeljenja'}`;
+  document.getElementById('cr-sub').textContent = search
+    ? `Filter: „${esc(search)}“ · ${ids.size} učenika`
+    : 'Uspjeh i aktivnost po odjeljenjima';
+
+  const wrap = document.getElementById('cr-wrap');
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="13" y="6" width="3" height="11" rx="1"/></svg></div><p>${search ? 'Nema odjeljenja za odabrani filter' : 'Nema registrovanih učenika'}</p></div>`;
+    document.getElementById('cr-inactive-card').style.display = 'none';
+    return;
+  }
+
+  wrap.innerHTML = `<table class="tbl2">
+    <thead><tr>
+      <th>Razred</th><th>Učenika</th><th>Riješeno</th><th>Prosj. %</th>
+      <th>Prosj. ocjena</th><th>Položilo</th><th style="min-width:150px">Raspored ocjena</th><th>Najbolji</th>
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const pctClr = pctColor(r.avgPercentage ?? 0);
+      const passClr= r.passRate >= 80 ? '#34D399' : r.passRate >= 50 ? '#FBBF24' : '#F87171';
+      const totalG = Object.values(r.gradeDist).reduce((a,b)=>a+b,0);
+      const stack  = totalG
+        ? `<div class="cr-stack">${[5,4,3,2,1].map(g => r.gradeDist[g]
+            ? `<div class="cr-seg g${g}" style="flex-grow:${r.gradeDist[g]}" title="${g} ×${r.gradeDist[g]}"></div>` : '').join('')}</div>
+           <div class="cr-legend">${[5,4,3,2,1].map(g => `<span><b style="color:${g>=5?'#FBBF24':g===4?'#34D399':g===3?'#818CF8':g===2?'#22D3EE':'#F87171'}">${g}</b> ${r.gradeDist[g]}</span>`).join('')}</div>`
+        : `<span class="cr-mute">nema ocjena</span>`;
+      const inactiveCell = r.inactiveCount
+        ? `<span class="cr-chip" onclick="showInactive('${esc(r.razred)}')" title="${esc(r.inactiveStudents.join(', '))}">${r.inactiveCount} bez kviza</span>`
+        : '<span class="cr-mute">—</span>';
+      return `<tr>
+        <td>
+          <div class="cr-name">
+            <div class="avatar" style="background:var(--accent-dim);color:var(--accent-light)">${esc((r.razred||'?')[0].toUpperCase())}</div>
+            <div>
+              <div class="cr-name-txt">${esc(r.razred)}</div>
+              <div class="cr-name-sub">${r.activeCount} aktivno · ${inactiveCell}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge2 purple">${r.studentCount}</span></td>
+        <td style="color:#94A3B8;font-family:var(--mono);font-size:13px">${r.resultCount}</td>
+        <td>${Number.isFinite(r.avgPercentage) ? renderPctBar(Math.round(r.avgPercentage)) : `<span class="cr-mute">${fmtPct(r.avgPercentage)}</span>`}</td>
+        <td style="font-size:20px;font-weight:800;color:${Number.isFinite(r.avgGrade)?(r.avgGrade>=4?'#FBBF24':r.avgGrade>=3?'#34D399':'#F87171'):'#475569'}">${fmtNum(r.avgGrade)}</td>
+        <td>
+          <div style="font-size:15px;font-weight:800;color:${passClr}">${fmtPct(r.passRate)}</div>
+          <div class="cr-mute">${r.passedCount}/${r.studentCount} · prag ${r.passThreshold}%</div>
+        </td>
+        <td>${stack}</td>
+        <td>${r.topStudent
+          ? `<div><div style="font-size:13px;font-weight:600;color:#fff">${esc(r.topStudent.displayName)}</div><div class="cr-mute">${Math.round(r.topStudent.avgPercentage)}% · ${r.topStudent.solved} kviz.</div></div>`
+          : '<span class="cr-mute">—</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+
+  renderInactiveByClass(rows);
+};
+
+window.filterQuizzes = filterQuizzes;
+window.filterResults  = filterResults;
+window.filterStudents = filterStudents;
+
+function renderClassSummary(sum, rows) {
+  const cards = [
+    { v: String(rows.length), l: 'Prikazanih odjeljenja', c: '#818CF8' },
+    { v: String(sum.studentCount), l: 'Učenika ukupno', c: '#22D3EE' },
+    { v: fmtPct(sum.participation), l: 'Riješilo barem 1 kviz', c: '#A78BFA' },
+    { v: Number.isFinite(sum.avgPercentage) ? Math.round(sum.avgPercentage)+'%' : '—', l: 'Prosječan rezultat', c: '#FBBF24' },
+    { v: fmtPct(sum.passRate), l: `Iznad praga (${rows[0]?.passThreshold ?? 54}%)`, c: '#34D399' },
+  ];
+  document.getElementById('cr-summary').innerHTML = cards.map(c => `
+    <div class="cr-card">
+      <div class="cr-card-v" style="color:${c.c}">${c.v}</div>
+      <div class="cr-card-l">${c.l}</div>
+    </div>`).join('');
+}
+
+function renderInactiveByClass(rows) {
+  const groups = buildInactiveByClass(rows);
+  const card   = document.getElementById('cr-inactive-card');
+  const list   = document.getElementById('cr-inactive-list');
+  if (!groups.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const totalNeaktivnih = groups.reduce((s,g)=>s+g.names.length,0);
+  list.innerHTML = `<p class="cr-mute" style="margin-bottom:14px">${totalNeaktivnih} ${totalNeaktivnih===1?'učenik':''} ${totalNeaktivnih===1?'nije riješio':'nisu riješili'} nijedan kviz — kliknite na ime da otvorite profil i podsjetite ih.</p>` +
+    groups.map(g => `<div class="act-item">
+      <div class="act-info">
+        <div class="act-name">${esc(g.razred)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          ${g.names.map(n => `<span class="cr-chip" onclick="openStudentByClass('${esc(g.razred)}','${esc(n)}')">${esc(n)}</span>`).join('')}
+        </div>
+      </div>
+      <span class="badge2 red">${g.names.length}</span>
+    </div>`).join('');
+}
+
+window.showInactive = (razred) => {
+  document.getElementById('cr-search').value = razred === UNASSIGNED_LABEL ? '' : razred;
+  renderClassReport();
+};
+
+window.openStudentByClass = (razred, name) => {
+  const s = allStudents.find(x => (x.razred || UNASSIGNED_LABEL) === razred && (x.displayName || '—') === name)
+         || allStudents.find(x => (x.displayName || '—') === name);
+  if (s) openStudentDetail(s.id);
+  else toast('Učenik nije pronađen', 'error');
+};
+
+// Izloženo na window jer HTML koristi inline onclick/oninput rukovaoce
+window.renderClassReport   = renderClassReport;
+window.exportClassReportCSV = exportClassReportCSV;
+
+function exportClassReportCSV() {
+  if (!crRows.length) { toast('Nema podataka za izvoz', 'error'); return; }
+  const blob = new Blob(['\uFEFF' + classReportToCSV(crRows)], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `kvizmajstor-razredni-pregled-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(`Izvezeno ${crRows.length} odjeljenja`, 'success');
+}
 
 function renderStudents(list) {
   const wrap = document.getElementById('students-wrap');
@@ -1375,6 +1666,7 @@ window.toggleStatus = async (id,current) => {
 window.delQuiz = async (id) => { await deleteDoc(doc(db,'quizzes',id)); toast('Kviz obrisan','success'); await loadAll(); };
 window.deleteResult = async (id) => { await deleteDoc(doc(db,'results',id)); toast('Rezultat obrisan','success'); await loadAll(); };
 window.deleteStudent = async (uid) => {
+  if (IS_DEMO) { toast('Demo način — brisanje je onemogućeno', 'info'); return; }
   try {
     await deleteDoc(doc(db,'users',uid));
     await fetch(`/api/admin/user/${uid}`,{method:'DELETE'});
@@ -1383,6 +1675,7 @@ window.deleteStudent = async (uid) => {
 };
 
 window.allowRetry = async (uid,name) => {
+  if (IS_DEMO) { toast('Demo način — ova radnja je onemogućena', 'info'); return; }
   const qSnap = await getDocs(query(collection(db,'quizzes')));
   const qList = qSnap.docs.map(d=>({id:d.id,...d.data()}));
   document.getElementById('modal-title').textContent=`Dozvoli ponavljanje — ${name}`;
@@ -1517,6 +1810,7 @@ window.saveStudentEdit = async () => {
     filterResults();
     renderStats();
     renderOverview();
+    renderClassReport();
 
     // If detail panel open for same student, refresh it
     const detailOpen = document.getElementById('student-detail').classList.contains('open');
@@ -1545,7 +1839,7 @@ window.saveStudentEdit = async () => {
       toast(`Razred promijenjen u ${newRazred} za ${newName}`,'success');
       const savedId = editingStudentId;
       closeEditStudentModal();
-      populateFilters(); filterStudents(); filterResults(); renderStats(); renderOverview();
+      populateFilters(); filterStudents(); filterResults(); renderStats(); renderOverview(); renderClassReport();
       if (document.getElementById('student-detail').classList.contains('open')) openStudentDetail(savedId);
     } catch(e2) {
       toast('Greška: '+ (e2.message || e.message),'error');
