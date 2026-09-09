@@ -715,6 +715,67 @@
   </div>
 </div>
 
+<!-- EDIT STUDENT MODAL -->
+<div class="modal-bg" id="edit-student-modal" style="display:none">
+  <div class="modal2">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal2-title" style="margin:0;display:flex;align-items:center;gap:10px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Uredi učenika
+      </div>
+      <button class="btn2 btn2-ghost btn2-sm" onclick="closeEditStudentModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Zatvori
+      </button>
+    </div>
+
+    <div id="es-avatar-wrap" style="text-align:center;margin-bottom:18px"></div>
+
+    <div class="fg2" style="margin-bottom:14px">
+      <label>Ime i prezime</label>
+      <input class="inp2" id="es-name" placeholder="Ime i prezime"/>
+    </div>
+    <div class="fg2" style="margin-bottom:14px">
+      <label>Email</label>
+      <input class="inp2" id="es-email" disabled style="opacity:.6"/>
+    </div>
+    <div class="row2" style="margin-bottom:14px">
+      <div class="fg2">
+        <label>Razred</label>
+        <select class="sel2" id="es-razred">
+          <option value="">— Odaberi razred —</option>
+          <option value="I-T5">I-T5</option>
+          <option value="II-S2">II-S2</option>
+          <option value="II-P">II-P</option>
+          <option value="III-S1">III-S1</option>
+          <option value="III-T3">III-T3</option>
+          <option value="III-T5">III-T5</option>
+          <option value="III-T6">III-T6</option>
+          <option value="IV-T3">IV-T3</option>
+          <option value="IV-T5">IV-T5</option>
+        </select>
+      </div>
+      <div class="fg2">
+        <label>Smjer / Profil</label>
+        <input class="inp2" id="es-smjer" placeholder="Npr. Elektrotehničar"/>
+      </div>
+    </div>
+
+    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:12px 14px;margin-bottom:4px;display:flex;gap:10px;align-items:flex-start">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span style="font-size:12.5px;color:#94A3B8;line-height:1.5">Ovdje možeš ispraviti razred ako je učenik pogrešno odabrao pri registraciji. Promjena će odmah biti vidljiva u svim prikazima i rezultatima.</span>
+    </div>
+
+    <div class="modal2-foot">
+      <button class="btn2 btn2-ghost" onclick="closeEditStudentModal()">Odustani</button>
+      <button class="btn2 btn2-primary" id="es-save-btn" onclick="saveStudentEdit()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Sačuvaj izmjene
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT QUIZ MODAL -->
 <div class="modal-bg" id="edit-modal" style="display:none">
   <div class="modal2-lg">
@@ -782,6 +843,8 @@ import { toast, gradeBadge, fmtDate, pctColor, btnLoad, btnReset } from '/js/uti
 
 let quizzes=[], results=[], users=[], allResults=[], allStudents=[];
 let editingQuiz = null;
+let editingStudentId = null;
+const ALL_RAZREDI = ["I-T5","II-S2","II-P","III-S1","III-T3","III-T5","III-T6","IV-T3","IV-T5"];
 
 onAuthStateChanged(auth, async (u) => {
   if (!u) { window.location.href='/login'; return; }
@@ -794,6 +857,7 @@ onAuthStateChanged(auth, async (u) => {
 document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
 document.getElementById('modal').onclick = (e) => { if(e.target===document.getElementById('modal')) closeModal(); };
 document.getElementById('edit-modal').onclick = (e) => { if(e.target===document.getElementById('edit-modal')) closeEditModal(); };
+document.getElementById('edit-student-modal').onclick = (e) => { if(e.target===document.getElementById('edit-student-modal')) closeEditStudentModal(); };
 document.getElementById('mobile-logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
 
 function closeMobileNav() {}
@@ -831,7 +895,8 @@ async function loadAll() {
 }
 
 function populateFilters() {
-  const razredi  = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))].sort();
+  const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
+  const razredi  = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
   const smjerovi = [...new Set(allStudents.map(s=>s.smjer).filter(Boolean))].sort();
   const predmeti = [...new Set(quizzes.map(q=>q.subject).filter(Boolean))].sort();
 
@@ -839,6 +904,15 @@ function populateFilters() {
     const el=document.getElementById(id); while(el.options.length>1)el.remove(1);
     razredi.forEach(r=>{const o=new Option(r,r);el.appendChild(o);});
   });
+
+  // Also populate razred in edit-student modal if extra razredi appeared
+  const esSel = document.getElementById('es-razred');
+  if (esSel) {
+    const existingVals = [...esSel.options].map(o=>o.value);
+    razredi.forEach(r=>{
+      if (!existingVals.includes(r)) esSel.appendChild(new Option(r,r));
+    });
+  }
   const sm=document.getElementById('s-smjer'); while(sm.options.length>1)sm.remove(1);
   smjerovi.forEach(s=>{sm.appendChild(new Option(s,s));});
   const pd=document.getElementById('r-predmet'); while(pd.options.length>1)pd.remove(1);
@@ -1093,7 +1167,11 @@ function renderStudents(list) {
         <td><span class="badge2 purple">${sr.length}</span></td>
         <td style="font-size:20px;font-weight:800;color:${clr}">${avg}</td>
         <td style="color:#475569;font-size:12px;font-family:var(--mono)">${fmtDate(s.createdAt)}</td>
-        <td onclick="event.stopPropagation()" style="display:flex;gap:6px">
+        <td onclick="event.stopPropagation()" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn2 btn2-primary btn2-sm" onclick="openEditStudent('${s.id}')" title="Promijeni razred">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Uredi
+          </button>
           <button class="btn2 btn2-teal btn2-sm" onclick="allowRetry('${s.id}','${s.displayName}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Ponovi
@@ -1149,6 +1227,10 @@ window.openStudentDetail = (uid) => {
         </div>
       </div>`).join(''):'<p style="font-size:13px;color:#475569;text-align:center;padding:20px 0">Nema riješenih kvizova</p>'}
     <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+      <button class="btn2 btn2-primary btn2-sm" onclick="openEditStudent('${s.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Promijeni razred
+      </button>
       <button class="btn2 btn2-teal btn2-sm" onclick="allowRetry('${s.id}','${s.displayName}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Ponovi kviz
@@ -1347,6 +1429,132 @@ function downloadCSV(rows,name) {
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`kvizmajstor-${name}-${new Date().toISOString().slice(0,10)}.csv`; a.click();
 }
+
+// ── EDIT STUDENT (RAZRED) ──
+window.openEditStudent = (uid) => {
+  const s = allStudents.find(u=>u.id===uid) || users.find(u=>u.id===uid);
+  if (!s) { toast('Učenik nije pronađen','error'); return; }
+  editingStudentId = uid;
+
+  document.getElementById('es-name').value  = s.displayName || '';
+  document.getElementById('es-email').value = s.email || '';
+  document.getElementById('es-smjer').value = s.smjer || '';
+
+  const razredSel = document.getElementById('es-razred');
+  // Ensure current razred exists in select
+  if (s.razred && ![...razredSel.options].some(o=>o.value===s.razred)) {
+    const opt = new Option(s.razred, s.razred);
+    razredSel.appendChild(opt);
+  }
+  razredSel.value = s.razred || '';
+
+  document.getElementById('es-avatar-wrap').innerHTML = `
+    <div class="avatar" style="width:64px;height:64px;font-size:24px;background:rgba(99,102,241,.15);color:#818CF8;margin:0 auto 10px">${(s.displayName||'?')[0].toUpperCase()}</div>
+    <div style="font-size:14px;font-weight:700;color:#fff">${s.displayName||'—'}</div>
+    <div style="font-size:11px;color:#64748B;margin-top:2px">Trenutni razred: <span class="badge2 blue" style="margin-left:6px">${s.razred||'—'}</span></div>
+  `;
+
+  document.getElementById('edit-student-modal').style.display='flex';
+};
+
+window.closeEditStudentModal = () => {
+  document.getElementById('edit-student-modal').style.display='none';
+  editingStudentId = null;
+};
+
+window.saveStudentEdit = async () => {
+  if (!editingStudentId) return;
+  const btn = document.getElementById('es-save-btn');
+  btnLoad(btn,'Čuvanje...');
+
+  const newName   = document.getElementById('es-name').value.trim();
+  const newRazred = document.getElementById('es-razred').value.trim();
+  const newSmjer  = document.getElementById('es-smjer').value.trim();
+
+  if (!newName) { toast('Unesite ime i prezime','error'); btnReset(btn); return; }
+  if (!newRazred) { toast('Odaberite razred','error'); btnReset(btn); return; }
+
+  try {
+    // Pokušaj preko backend API (radi i ako su Firestore rules restriktivne)
+    const resp = await fetch(`/api/admin/user/${editingStudentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: newName, razred: newRazred, smjer: newSmjer })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Backend greška');
+
+    // Fallback ako backend nije konfigurisan – pokušaj direktno client-side
+    if (!data.success) {
+      await updateDoc(doc(db,'users',editingStudentId), {
+        displayName: newName,
+        razred: newRazred,
+        smjer: newSmjer
+      });
+    }
+
+    // Update local cache
+    const idxAll = allStudents.findIndex(s=>s.id===editingStudentId);
+    if (idxAll>=0) {
+      allStudents[idxAll].displayName = newName;
+      allStudents[idxAll].razred = newRazred;
+      allStudents[idxAll].smjer = newSmjer;
+    }
+    const idxU = users.findIndex(u=>u.id===editingStudentId);
+    if (idxU>=0) {
+      users[idxU].displayName = newName;
+      users[idxU].razred = newRazred;
+      users[idxU].smjer = newSmjer;
+    }
+
+    toast(`Razred promijenjen u ${newRazred} za ${newName}`,'success');
+    const savedId = editingStudentId;
+    closeEditStudentModal();
+
+    // Refresh UI
+    populateFilters();
+    filterStudents();
+    filterResults();
+    renderStats();
+    renderOverview();
+
+    // If detail panel open for same student, refresh it
+    const detailOpen = document.getElementById('student-detail').classList.contains('open');
+    if (detailOpen) openStudentDetail(savedId);
+
+  } catch(e) {
+    // Fallback na client-side update ako backend fail-a zbog configa
+    try {
+      await updateDoc(doc(db,'users',editingStudentId), {
+        displayName: newName,
+        razred: newRazred,
+        smjer: newSmjer
+      });
+      const idxAll = allStudents.findIndex(s=>s.id===editingStudentId);
+      if (idxAll>=0) {
+        allStudents[idxAll].displayName = newName;
+        allStudents[idxAll].razred = newRazred;
+        allStudents[idxAll].smjer = newSmjer;
+      }
+      const idxU = users.findIndex(u=>u.id===editingStudentId);
+      if (idxU>=0) {
+        users[idxU].displayName = newName;
+        users[idxU].razred = newRazred;
+        users[idxU].smjer = newSmjer;
+      }
+      toast(`Razred promijenjen u ${newRazred} za ${newName}`,'success');
+      const savedId = editingStudentId;
+      closeEditStudentModal();
+      populateFilters(); filterStudents(); filterResults(); renderStats(); renderOverview();
+      if (document.getElementById('student-detail').classList.contains('open')) openStudentDetail(savedId);
+    } catch(e2) {
+      toast('Greška: '+ (e2.message || e.message),'error');
+      btnReset(btn);
+      return;
+    }
+  }
+  btnReset(btn);
+};
 
 window.confirmAction = (title,body,onConfirm) => {
   document.getElementById('modal-title').textContent=title;
