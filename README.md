@@ -35,7 +35,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      // Svi prijavljeni mogu čitati, vlasnik + admin mogu pisati
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /quizzes/{quizId} {
       allow read: if request.auth != null;
@@ -47,6 +49,7 @@ service cloud.firestore {
   }
 }
 ```
+> **Napomena:** Za izmjenu razreda admin koristi backend API `/api/admin/user/:uid` koji radi preko Firebase Admin SDK i zaobilazi rules, tako da radi i sa starim pravilima.
 
 ### 4. Admin prava
 Nakon registracije, u Firebase Console → Firestore → kolekcija `users`

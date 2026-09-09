@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 dotenv.config();
 
@@ -17,11 +18,13 @@ const mistral   = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 
 // ── Firebase Admin init ──────────────────────────────────────────────────────
 let adminAuth = null;
+let adminDb   = null;
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
   if (serviceAccount.project_id) {
     initializeApp({ credential: cert(serviceAccount) });
     adminAuth = getAuth();
+    adminDb   = getFirestore();
     console.log('✅ Firebase Admin inicijalizovan');
   } else {
     console.warn('⚠️  FIREBASE_SERVICE_ACCOUNT nije postavljen');
@@ -62,6 +65,48 @@ app.delete('/api/admin/user/:uid', async (req, res) => {
       res.json({ success: true, note: 'Korisnik nije bio u Authu' });
     else
       res.status(500).json({ error: e.message });
+  }
+});
+
+// ── API: UPDATE USER (razred, smjer, ime) ────────────────────────────────────
+app.put('/api/admin/user/:uid', async (req, res) => {
+  if (!adminDb)
+    return res.status(503).json({ error: 'Firebase Admin nije konfigurisan' });
+  try {
+    const { razred, smjer, displayName } = req.body;
+    if (!razred) return res.status(400).json({ error: 'Razred je obavezan' });
+
+    const validRazredi = ["I-T5","II-S2","II-P","III-S1","III-T3","III-T5","III-T6","IV-T3","IV-T5"];
+    // Allow custom razred too, but trim
+    const cleanRazred = String(razred).trim();
+    const cleanSmjer  = smjer ? String(smjer).trim() : '';
+    const cleanName   = displayName ? String(displayName).trim() : '';
+
+    const updateData = {
+      razred: cleanRazred,
+      updatedAt: new Date().toISOString()
+    };
+    if (cleanSmjer)  updateData.smjer = cleanSmjer;
+    if (cleanName)   updateData.displayName = cleanName;
+
+    await adminDb.collection('users').doc(req.params.uid).update(updateData);
+
+    // Also update existing results razred snapshot if you want? Keep optional - we update razred field in results for consistency
+    try {
+      const resultsSnap = await adminDb.collection('results').where('userId','==', req.params.uid).get();
+      const batch = adminDb.batch();
+      resultsSnap.forEach(docSnap => {
+        batch.update(docSnap.ref, { razred: cleanRazred });
+      });
+      if (!resultsSnap.empty) await batch.commit();
+    } catch(e) {
+      console.warn('⚠️  Neuspjelo ažuriranje razreda u rezultatima:', e.message);
+    }
+
+    res.json({ success: true, updated: updateData });
+  } catch(e) {
+    console.error('❌ update-user greška:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 
