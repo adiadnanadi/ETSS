@@ -1664,6 +1664,32 @@ async function authHeaders() {
   return { Authorization: 'Bearer ' + t };
 }
 
+// ── Učitavanje literature ───────────────────────────────────────────────────
+// Jedino mjesto koje puni `materials`. Poziva se pri prijavi (loadAll) i poslije
+// svake izmjene (dodaj / uredi / sakrij / obriši), pa tab ne ostaje prazan.
+let driveStatusRequested = false;
+
+async function loadMaterials() {
+  // Banner sa Google Drive statusom (i dugme "Poveži Google Drive") se crta
+  // iz loadDriveStatus — tražimo ga samo pri prvom učitavanju.
+  if (!driveStatusRequested) { driveStatusRequested = true; loadDriveStatus(); }
+
+  try {
+    const res  = await fetch('/api/materials', { headers: await authHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Greška');
+    materials = data.materials || [];
+  } catch(e) {
+    // Ne rušimo cijeli panel ako /api/materials padne — samo prazna lista.
+    materials = [];
+    console.warn('materials:', e.message);
+    toast('Ne mogu učitati literaturu: ' + e.message, 'error');
+  }
+
+  populateMaterialFilters();
+  filterMaterials();
+}
+
 let driveInfo = null;
 let driveParamsHandled = false;
 
