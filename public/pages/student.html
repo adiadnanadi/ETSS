@@ -975,10 +975,8 @@
     }
   };
 
-  window.openMaterialDrive = (id) => {
-    const m = materials.find(x => x.id === id);
-    if (m?.drive?.drive) window.open(m.drive.drive, '_blank');
-  };
+  // Učenik NEMA direktan pristup Google Drive-u — samo „Otvori" (novi prozor)
+  // i „Preuzmi", oba kroz naš server. Drive link dobija isključivo admin.
 
   window.renderMaterials = () => {
     const grid    = document.getElementById('materials-grid');
@@ -1070,18 +1068,14 @@
             </span>
           </div>
           <div class="qc-footer" style="display:flex;gap:8px">
-            <button class="btn-primary-v2" onclick="openMaterialFile('${m.id}', false)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Čitaj
+            <button class="btn-primary-v2" onclick="openMaterialFile('${m.id}', false)" title="Otvori u novom prozoru">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Otvori
             </button>
             <button class="btn-secondary-v2" onclick="openMaterialFile('${m.id}', true)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Preuzmi
             </button>
-            ${m.drive ? `<button class="btn-secondary-v2" onclick="openMaterialDrive('${m.id}')" title="Otvori u Google Drive pregledu">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Drive
-            </button>` : ''}
           </div>
         </div>`;
     }).join('');

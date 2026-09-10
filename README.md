@@ -110,7 +110,9 @@ Env kredencijali imaju prioritet nad onima iz panela. Provjera: `npm run drive:c
   se/isključuje čekboksom *Napravi javni link*, a dugme **Link** u tabeli ga kopira.
 - **Viewer** `/viewer?m=<token>` ili `/viewer?id=<id>` — PDF se čita u browseru,
   DOC/PPT nude preuzimanje (+ Google Drive pregled).
-- **Drive** dugme — pravi link na fajl u Drive-u (admin uvijek; učenik samo ako je fajl dijeljen).
+- **Drive** dugme — pravi link na fajl u Drive-u; vidi ga **samo administrator**.
+  Učenik nema direktan pristup Google Drive-u — ima samo dugmad **Otvori**
+  (novi prozor) i **Preuzmi**, oba kroz naš server.
 
 **API rute:**
 | Metoda | Ruta | Ko | Opis |
@@ -134,8 +136,9 @@ Autorizacija: Firebase ID token u `Authorization: Bearer ...` (ili `?token=` za 
 #### Testovi
 
 ```bash
-npm test              # 51 test: rute, Range/stream, javni linkovi, Drive klijent,
-                      # povezivanje Drive-a iz panela, smoke pravog servera
+npm test              # 75 testova: rute, Range/stream, javni linkovi, Drive klijent,
+                      # povezivanje Drive-a iz panela, učenik bez Drive linka,
+                      # smoke pravog servera
 npm run drive:check   # provjeri env kredencijale (ako ih koristiš)
 ```
 

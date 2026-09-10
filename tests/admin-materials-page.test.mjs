@@ -354,6 +354,18 @@ test('student.html: loadMaterials je izložena na window (inline onclick "Pokuš
     'modul nije u globalnom scope-u — bez window.loadMaterials retry dugme ne radi');
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+// 3c) student.html: učenik NEMA direktan pristup Google Drive-u. Stranica mu
+//     nudi samo „Otvori" (novi prozor) i „Preuzmi" — oba kroz naš server;
+//     Drive link dobija isključivo administrator.
+// ════════════════════════════════════════════════════════════════════════════
+test('student.html: učenik nema Drive dugme — samo „Otvori" i „Preuzmi"', () => {
+  assert.match(studentCode, /title="Otvori u novom prozoru"/, 'dugme „Otvori" (novi prozor) mora postojati');
+  assert.match(studentCode, /Preuzmi\s*<\/button>/, 'dugme „Preuzmi" mora postojati');
+  assert.doesNotMatch(studentCode, /openMaterialDrive/, 'Drive logika ne smije postojati na studentskoj stranici');
+  assert.doesNotMatch(studentCode, /m\.drive\s*\?/, 'render kartice ne smije zavisiti od Drive linka');
+});
+
 /** Izvršava STVARNI izvor loadMaterials() iz student.html uz stub-ove. */
 function studentMaterialsHarness({ fetchImpl }) {
   const calls = { renders: 0, errors: [] };

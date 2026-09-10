@@ -161,7 +161,7 @@
     body.innerHTML = `<div class="mv-center"><div class="mv-card">
       <div class="mv-icon" style="background:${color}22;color:${color}">${esc((m.ext || '?').toUpperCase())}</div>
       <div class="mv-h1">${esc(m.title)}</div>
-      <div class="mv-p">${esc(m.description || 'Ovaj format se preuzima ili otvara u Google Drive pregledu.')}</div>
+      <div class="mv-p">${esc(m.description || (m.drive ? 'Ovaj format se preuzima ili otvara u Google Drive pregledu.' : 'Ovaj format se preuzima na vaš uređaj.'))}</div>
       <div class="mv-meta">
         <span>${esc(fmtSize(m.size))}</span>
         ${m.fileName ? `<span>${esc(m.fileName)}</span>` : ''}
