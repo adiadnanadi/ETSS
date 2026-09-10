@@ -220,7 +220,7 @@ test('lista: razmak u razredu je isto što i crtica (III 1 = III-1)', async () =
 
 test('lista: učenik vidi samo svoj razred i vidljivo, bez internih polja', async () => {
   const ctx = await boot({ seed: {
-    'materials/m1': { title: 'Za III-1', razredi: ['III-1'], visible: true,  ext: 'pdf', driveFileId: 'D1', shareToken: 'a'.repeat(24), createdAt: '2024-01-01' },
+    'materials/m1': { title: 'Za III-1', razredi: ['III-1'], visible: true,  ext: 'pdf', driveFileId: 'D1', driveShared: true, shareToken: 'a'.repeat(24), createdAt: '2024-01-01' },
     'materials/m2': { title: 'Za IV-2', razredi: ['IV-2'], visible: true,  ext: 'pdf', driveFileId: 'D2', shareToken: 'b'.repeat(24), createdAt: '2024-02-01' },
     'materials/m3': { title: 'Skriveno', razredi: [],      visible: false, ext: 'pdf', driveFileId: 'D3', shareToken: 'c'.repeat(24), createdAt: '2024-03-01' },
     'materials/m4': { title: 'Za sve',  razredi: [],       visible: true,  ext: 'docx', shareToken: 'd'.repeat(24), createdAt: '2024-04-01' }
@@ -230,6 +230,8 @@ test('lista: učenik vidi samo svoj razred i vidljivo, bez internih polja', asyn
     assert.deepEqual(student.body.materials.map(m => m.title).sort(), ['Za III-1', 'Za sve']);
     assert.ok(!JSON.stringify(student.body).includes('driveFileId'));
     assert.ok(!JSON.stringify(student.body).includes('Drive' + ' ID'));
+    // Drive link ne ide učeniku ni kad je fajl javno podijeljen na Drive-u
+    assert.ok(student.body.materials.every(m => m.drive === undefined), 'učenik ne smije dobiti Drive link');
 
     // razred koji ne odgovara → nema pristupa fajlu
     const denied = await ctx.get('/api/materials/m2/file', 'iii1-token');
@@ -260,16 +262,18 @@ test('fajl: stream sa Drive-a uz podršku za Range i preuzimanje', async () => {
 
     const meta = await ctx.json('/api/materials/m1/meta?token=iii1-token');
     assert.equal(meta.body.material.storeKind, 'drive');
-    // materijal nije javno podijeljen → učenik NE dobija Google link
+    // učenik NE dobija Google Drive link — čita/preuzima kroz našu stranicu
     assert.equal(meta.body.material.drive, undefined);
 
     const adminMeta = await ctx.json('/api/materials/m1/meta', 'admin-token');
     assert.ok(adminMeta.body.material.drive.preview.includes('/preview'));
 
-    // ako je fajl podijeljen na Drive-u, učenik dobija samo pregled link
+    // ni kad je fajl javno podijeljen na Drive-u, učenik i dalje NE dobija link
     ctx.db._store.docs.set('materials/m1', { ...ctx.db.dump('materials/m1'), driveShared: true });
     const sharedMeta = await ctx.json('/api/materials/m1/meta?token=iii1-token');
-    assert.ok(sharedMeta.body.material.drive.drive.includes('/file/d/D1/'));
+    assert.equal(sharedMeta.body.material.drive, undefined, 'učenik nikad ne dobija Drive link');
+    const sharedAdminMeta = await ctx.json('/api/materials/m1/meta', 'admin-token');
+    assert.ok(sharedAdminMeta.body.material.drive.drive.includes('/file/d/D1/'));
   } finally { await ctx.close(); }
 });
 
