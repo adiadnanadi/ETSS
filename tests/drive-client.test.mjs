@@ -42,6 +42,11 @@ async function fakeGoogle() {
                            storageQuota: { limit: '1000', usage: '100' } });
       }
 
+      // upload koji pada zbog kvote (servisni nalozi na Gmail-u)
+      if (url.pathname === '/quota-upload' && req.method === 'POST') {
+        return json(res, { error: { message: "The user's Drive storage quota has been exceeded.", code: 403 } }, 403);
+      }
+
       // upload (multipart)
       if (url.pathname === '/upload/drive/v3/files' && req.method === 'POST') {
         const text = body.toString('latin1');
@@ -262,3 +267,22 @@ async function collect(stream) {
   for await (const chunk of stream) out.push(Buffer.from(chunk));
   return out;
 }
+
+test('drive klijent: kvota daje poruku koja kaže ŠTA konkretno uraditi', async () => {
+  const g = await fakeGoogle();
+  try {
+    const cfg = {
+      ...oauthCfg(g.endpoints),
+      folderId: '',   // bez foldera → nema retry-a, odmah jasna poruka
+      endpoints: { ...g.endpoints, upload: g.endpoints.upload.replace('/upload/drive/v3/files', '/quota-upload') }
+    };
+    const drive = createDriveClient(cfg);
+    const err = await drive.upload({ name: 'x.pdf', mimeType: 'application/pdf', buffer: Buffer.from('x') })
+      .then(() => null, e => e);
+
+    assert.ok(err, 'upload je morao pasti');
+    assert.equal(err.status, 507);
+    assert.match(err.message, /npm run drive:auth|kvotu/i);
+    assert.ok(!/quotaExceeded|storageQuotaExceeded/.test(err.message), 'bez Google žargona u poruci');
+  } finally { await g.close(); }
+});

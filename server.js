@@ -162,6 +162,16 @@ if (driveMode(driveCfg) !== 'off') {
     driveClient = createDriveClient(driveCfg);
     register(createDriveStore(driveClient), { priority: 1 });
     driveInfo = { connected: true, mode: driveClient.mode, folderId: driveCfg.folderId || null, error: null };
+
+    // Najčešća greška: isti (Firebase) servisni nalog se koristi i za Drive.
+    // Takav nalog nema Google kvotu za upload, pa odmah upozorimo u logu.
+    try {
+      const fb = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+      if (driveCfg.serviceAccount && fb.client_email && driveCfg.serviceAccount.client_email === fb.client_email) {
+        console.warn('⚠️  GOOGLE_SERVICE_ACCOUNT je isti kao FIREBASE_SERVICE_ACCOUNT — taj nalog NEMA kvotu za Drive upload.');
+        console.warn('   Preporuka: poveži lični Drive sa "npm run drive:auth" (README, sekcija 4, varijanta A).');
+      }
+    } catch { /* FIREBASE_SERVICE_ACCOUNT nije JSON — ignorisi */ }
     console.log(`✅ Google Drive skladište aktivno (${driveClient.mode}${driveCfg.folderId ? ', folder ' + driveCfg.folderId : ''})`);
   } catch (e) {
     driveInfo = { connected: false, mode: driveMode(driveCfg), error: e.message };
