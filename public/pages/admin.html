@@ -714,6 +714,7 @@
         Dodaj materijal
       </button>
     </div>
+    <div id="store-banner" style="margin-bottom:16px"></div>
     <div class="card">
       <div class="filter-bar">
         <div class="search-wrap" style="max-width:320px">
@@ -755,8 +756,21 @@
       <div style="font-size:11.5px;color:#64748B;margin-top:6px">Ako ne odabereš nijedan razred, materijal vide svi učenici.</div>
     </div>
     <div class="fg2" id="mm-file-fld" style="margin-bottom:8px">
-      <label>Fajl — PDF, DOC, DOCX, PPT, PPTX, TXT (max 20MB)</label>
+      <label>Fajl — PDF, DOC, DOCX, PPT, PPTX, TXT (max <span id="mm-max">20</span> MB)</label>
       <input class="inp2" type="file" id="mm-file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"/>
+      <div style="font-size:11.5px;color:#64748B;margin-top:6px" id="mm-store-note">
+        Fajl se uplouduje direktno na Google Drive — ne moraš ništa ručno stavljati na Drive.
+      </div>
+    </div>
+    <div class="fg2" style="margin-bottom:8px">
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="mm-share" checked/>
+        Napravi javni link (radi i bez prijave na stranicu)
+      </label>
+      <div style="font-size:11.5px;color:#64748B;margin-top:6px">
+        Link izgleda kao <code style="font-family:monospace">/m/ab12…</code> i vodi direktno na fajl.
+        Isključi ako materijal smiju vidjeti samo prijavljeni učenici.
+      </div>
     </div>
     <div class="modal2-foot">
       <button class="btn2 btn2-ghost" onclick="closeMaterialModal()">Odustani</button>
@@ -1650,6 +1664,8 @@ async function authHeaders() {
   return { Authorization: 'Bearer ' + t };
 }
 
+let storageInfo = null;
+
 async function loadMaterials() {
   try {
     const res  = await fetch('/api/materials', { headers: await authHeaders() });
@@ -1664,6 +1680,68 @@ async function loadMaterials() {
   if (cnt) cnt.textContent = materials.length;
   populateMaterialFilters();
   filterMaterials();
+  loadStorageStatus();
+}
+
+// Prikazuje gdje fajlovi odlaze (Google Drive) i upozori ako Drive nije povezan
+async function loadStorageStatus() {
+  const el = document.getElementById('store-banner');
+  if (!el) return;
+  try {
+    const res  = await fetch('/api/storage/status', { headers: await authHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Greška');
+    storageInfo = data;
+  } catch(e) {
+    storageInfo = null;
+    return;
+  }
+
+  const drive = storageInfo?.drive;
+  const maxMb = `${storageInfo?.maxUploadMb || 20} MB`;
+  const maxEl = document.getElementById('mm-max'); if (maxEl) maxEl.textContent = storageInfo?.maxUploadMb || 20;
+
+  const chip = (color, text) =>
+    `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${color};background:${color}1A;border:1px solid ${color}33;border-radius:999px;padding:4px 10px">${text}</span>`;
+
+  const kv = (label, value) =>
+    `<div style="display:flex;gap:8px;font-size:12.5px;color:#94A3B8"><span style="color:#64748B">${label}</span><span style="color:#CBD5E1;font-weight:600">${value}</span></div>`;
+
+  if (drive && drive.connected) {
+    const quota = drive.storage && drive.storage.limit
+      ? `${fmtSize(drive.storage.usage)} / ${fmtSize(drive.storage.limit)}`
+      : (drive.storage ? `${fmtSize(drive.storage.usage)} iskorišteno` : '—');
+    const note  = drive.folder && drive.folder.error
+      ? `<div style="font-size:12px;color:#F59E0B;margin-top:10px">⚠️ Folder: ${drive.folder.error}</div>`
+      : '';
+    el.innerHTML = `<div class="card" style="padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        ${chip('#22C55E', '● Google Drive povezan')}
+        ${chip('#3B82F6', (drive.mode === 'oauth' ? 'Tvoj lični Drive' : 'Service account') + ' · ' + maxMb)}
+        ${drive.name || drive.email ? `<span style="font-size:12.5px;color:#64748B">${drive.email || drive.name}</span>` : ''}
+      </div>
+      <div style="display:flex;gap:22px;flex-wrap:wrap">
+        ${kv('Lokacija:', drive.folder ? (drive.folder.name || 'folder') : 'Google Drive')}
+        ${kv('Zauzeće:', quota)}
+        ${kv('Novi fajlovi:', 'id u Google Drive')}
+      </div>${note}
+    </div>`;
+  } else {
+    const err = drive?.error || 'Google Drive nije povezan.';
+    el.innerHTML = `<div class="card" style="padding:16px 18px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.07)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        ${chip('#F59E0B', '● Drive nije povezan')}
+        ${chip('#94A3B8', 'Fajlovi: ' + (storageInfo?.activeLabel || 'rezervno skladište'))}
+      </div>
+      <div style="font-size:12.5px;color:#CBD5E1;line-height:1.7">
+        ${err}<br/>
+        Poveži Drive tako što ćeš na Renderu (Environment) dodati
+        <code style="font-family:monospace">GOOGLE_SERVICE_ACCOUNT</code> (JSON service account) i
+        <code style="font-family:monospace">GDRIVE_FOLDER_ID</code> — detalji u README-u, sekcija
+        <b>Google Drive</b>. Do tada fajlovi rade, ali se ne pojavljuju na Drive-u.
+      </div>
+    </div>`;
+  }
 }
 
 function populateMaterialFilters() {
@@ -1712,7 +1790,7 @@ window.filterMaterials = () => {
     return;
   }
   wrap.innerHTML = `<table class="tbl2">
-    <thead><tr><th>Materijal</th><th>Predmet</th><th>Razredi</th><th>Veličina</th><th>Dodano</th><th>Vidljivo</th><th style="text-align:right">Akcije</th></tr></thead>
+    <thead><tr><th>Materijal</th><th>Predmet</th><th>Razredi</th><th>Fajl</th><th>Dodano</th><th>Vidljivo</th><th style="text-align:right">Akcije</th></tr></thead>
     <tbody>${filtered.map(m=>`
       <tr>
         <td>
@@ -1726,12 +1804,20 @@ window.filterMaterials = () => {
         </td>
         <td>${m.subject ? `<span class="badge2 blue">${m.subject}</span>` : '—'}</td>
         <td style="font-size:12px;color:#94A3B8">${(m.razredi&&m.razredi.length) ? m.razredi.join(', ') : 'Svi'}</td>
-        <td style="font-size:12.5px">${fmtSize(m.size)}</td>
+        <td>
+          <div style="font-size:12.5px">${fmtSize(m.size)}</div>
+          <div style="margin-top:3px">${storeBadge(m)}</div>
+        </td>
         <td style="font-size:12.5px">${fmtDate(m.createdAt)}</td>
-        <td>${m.visible===false ? '<span class="badge2 red">Skriveno</span>' : '<span class="badge2 green">Da</span>'}</td>
+        <td>
+          ${m.visible===false ? '<span class="badge2 red">Skriveno</span>' : '<span class="badge2 green">Da</span>'}
+          ${m.shareUrl ? '<div style="margin-top:3px"><span class="badge2 purple">Javni link</span></div>' : ''}
+        </td>
         <td style="text-align:right;white-space:nowrap">
-          <button class="btn2 btn2-ghost btn2-sm" onclick="openMaterial('${m.id}')" title="Otvori">Otvori</button>
-          <button class="btn2 btn2-ghost btn2-sm" onclick="toggleMaterial('${m.id}')" title="Vidljivost">${m.visible===false?'Prikaži':'Sakrij'}</button>
+          <button class="btn2 btn2-ghost btn2-sm" onclick="openMaterial('${m.id}')" title="Otvori u pregledu">Otvori</button>
+          ${m.shareUrl ? `<button class="btn2 btn2-ghost btn2-sm" onclick="copyMaterialLink('${m.id}')" title="Kopiraj link za dijeljenje">Link</button>` : ''}
+          ${m.drive ? `<button class="btn2 btn2-ghost btn2-sm" onclick="openMaterialDrive('${m.id}')" title="Otvori na Google Drive-u">Drive</button>` : ''}
+          <button class="btn2 btn2-ghost btn2-sm" onclick="toggleMaterial('${m.id}')" title="Vidljivost učenicima">${m.visible===false?'Prikaži':'Sakrij'}</button>
           <button class="btn2 btn2-primary btn2-sm" onclick="openMaterialModal('${m.id}')">Uredi</button>
           <button class="btn2 btn2-danger btn2-sm" onclick="deleteMaterial('${m.id}')">Obriši</button>
         </td>
@@ -1739,9 +1825,38 @@ window.filterMaterials = () => {
     </tbody></table>`;
 };
 
+// Mala oznaka gdje fajl živi (Google Drive / interna baza)
+function storeBadge(m) {
+  if (m.drive || m.storeKind === 'drive') {
+    return '<span class="badge2 green" title="Fajl je na Google Drive-u">Google Drive</span>';
+  }
+  if (m.storeKind === 'firestore') return '<span class="badge2 blue" title="Fajl je u internoj bazi">Baza</span>';
+  if (m.storeKind === 'storage') return '<span class="badge2 blue">Storage</span>';
+  return '<span class="badge2">—</span>';
+}
+
 window.openMaterial = async (id) => {
   const t = await auth.currentUser.getIdToken();
-  window.open(`/api/materials/${id}/file?token=${encodeURIComponent(t)}`, '_blank');
+  // Viewer stranica: PDF se čita u browseru, ostalo nudi preuzimanje / Drive pregled
+  window.open(`/viewer?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}`, '_blank');
+};
+
+window.openMaterialDrive = (id) => {
+  const m = materials.find(x=>x.id===id);
+  const url = m?.drive?.drive || m?.drive?.preview;
+  if (!url) { toast('Ovaj materijal nije na Google Drive-u','error'); return; }
+  window.open(url, '_blank');
+};
+
+window.copyMaterialLink = async (id) => {
+  const m = materials.find(x=>x.id===id);
+  if (!m?.shareUrl) { toast('Javni link je isključen za ovaj materijal','error'); return; }
+  try {
+    await navigator.clipboard.writeText(m.shareUrl);
+    toast('Link kopiran: '+m.shareUrl,'success');
+  } catch(e) {
+    window.prompt('Kopiraj link:', m.shareUrl);
+  }
 };
 
 window.openMaterialModal = (id = null) => {
@@ -1754,6 +1869,17 @@ window.openMaterialModal = (id = null) => {
   document.getElementById('mm-desc').value    = m?.description || '';
   document.getElementById('mm-file-fld').style.display = m ? 'none' : 'flex';
   const fileEl = document.getElementById('mm-file'); if (fileEl) fileEl.value = '';
+  const shareEl = document.getElementById('mm-share');
+  if (shareEl) shareEl.checked = m ? !!m.shareUrl : true;
+
+  const note = document.getElementById('mm-store-note');
+  if (note) {
+    const active = storageInfo?.drive?.connected;
+    note.innerHTML = m
+      ? (m.drive ? 'Fajl je na Google Drive-u — izmjena naziva se prenosi i tamo.' : 'Fajl je u internoj bazi.')
+      : (active ? 'Fajl se uplouduje direktno na tvoj Google Drive — ne moraš ručno ništa stavljati tamo.'
+                : '⚠️ Google Drive nije povezan — fajl ide u rezervno skladište dok se Drive ne poveže.');
+  }
 
   const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
   const razredi   = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
@@ -1773,6 +1899,7 @@ window.saveMaterial = async () => {
   const subject = document.getElementById('mm-subject').value.trim();
   const description = document.getElementById('mm-desc').value.trim();
   const razredi = [...document.querySelectorAll('.mm-rz:checked')].map(c=>c.value);
+  const shareEnabled = document.getElementById('mm-share')?.checked ? '1' : '0';
   const file = document.getElementById('mm-file')?.files?.[0];
 
   if (!editingMaterialId && !file) { toast('Odaberite fajl','error'); return; }
@@ -1784,7 +1911,7 @@ window.saveMaterial = async () => {
       const res = await fetch('/api/materials/'+editingMaterialId, {
         method: 'PUT',
         headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
-        body: JSON.stringify({ title, subject, description, razredi })
+        body: JSON.stringify({ title, subject, description, razredi, shareEnabled: shareEnabled === '1' })
       });
       const d = await res.json(); if (!res.ok) throw new Error(d.error);
       toast('Materijal ažuriran','success');
@@ -1795,9 +1922,14 @@ window.saveMaterial = async () => {
       fd.append('subject', subject);
       fd.append('description', description);
       fd.append('razredi', JSON.stringify(razredi));
+      fd.append('shareEnabled', shareEnabled);
       const res = await fetch('/api/materials', { method:'POST', headers: await authHeaders(), body: fd });
       const d = await res.json(); if (!res.ok) throw new Error(d.error);
-      toast('Materijal dodan','success');
+      const where = d.material?.drive ? 'na Google Drive' : 'u skladište';
+      toast(`Materijal dodan ${where}`,'success');
+      if (d.material?.shareUrl) {
+        try { await navigator.clipboard.writeText(d.material.shareUrl); toast('Link kopiran','success'); } catch(e) {}
+      }
     }
     closeMaterialModal();
     await loadMaterials();
