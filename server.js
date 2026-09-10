@@ -16,6 +16,7 @@ import { createDriveStore } from './lib/drive-store.js';
 import { register, primaryStore, storeForMaterial } from './lib/file-stores.js';
 import { createMaterialsRouter } from './lib/materials-router.js';
 import { createDriveRouter } from './lib/drive-router.js';
+import { normalizeRazred } from './lib/materials.js';
 
 dotenv.config();
 
@@ -95,8 +96,10 @@ app.put('/api/admin/user/:uid', async (req, res) => {
     if (!razred) return res.status(400).json({ error: 'Razred je obavezan' });
 
     const validRazredi = ["I-T5","II-S2","II-P","III-S1","III-T3","III-T5","III-T6","IV-T3","IV-T5"];
-    // Allow custom razred too, but trim
-    const cleanRazred = String(razred).trim();
+    // Allow custom razred too, ali ga normalizuj ("iii t5" → "III-T5") tako da
+    // se uvijek poklopi sa razredima označenim na materijalima.
+    const cleanRazred = normalizeRazred(razred);
+    if (!cleanRazred) return res.status(400).json({ error: 'Razred je obavezan' });
     const cleanSmjer  = smjer ? String(smjer).trim() : '';
     const cleanName   = displayName ? String(displayName).trim() : '';
 

@@ -199,6 +199,25 @@ test('lista: učenik vidi materijal označen za njegov razred i kad je zapis dru
   } finally { await ctx.close(); }
 });
 
+test('lista: razmak u razredu je isto što i crtica (III 1 = III-1)', async () => {
+  const ctx = await boot({ seed: {
+    'materials/m1': { title: 'Crtica u bazi', razredi: ['III-1'], visible: true, ext: 'pdf', shareToken: 'a'.repeat(24), createdAt: '2024-01-01' },
+    'materials/m2': { title: 'Razmak u bazi', razredi: ['III 1'], visible: true, ext: 'pdf', shareToken: 'b'.repeat(24), createdAt: '2024-02-01' }
+  }});
+  try {
+    // učenik iii1-token ima razred 'III-1' — mora vidjeti OBA zapisa
+    const list = await ctx.json('/api/materials', 'iii1-token');
+    assert.deepEqual(list.body.materials.map(m => m.title).sort(), ['Crtica u bazi', 'Razmak u bazi']);
+
+    const file = await ctx.get('/api/materials/m2/file', 'iii1-token');
+    assert.equal(file.status, 200);
+
+    // drugi razred i dalje ne vidi
+    const other = await ctx.json('/api/materials', 'iv2-token');
+    assert.deepEqual(other.body.materials.map(m => m.title), []);
+  } finally { await ctx.close(); }
+});
+
 test('lista: učenik vidi samo svoj razred i vidljivo, bez internih polja', async () => {
   const ctx = await boot({ seed: {
     'materials/m1': { title: 'Za III-1', razredi: ['III-1'], visible: true,  ext: 'pdf', driveFileId: 'D1', shareToken: 'a'.repeat(24), createdAt: '2024-01-01' },

@@ -236,7 +236,77 @@ test('Google Drive status se traži samo pri prvom učitavanju', async () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// 3) Nijedna stranica ne smije zvati nedefinisanu funkciju
+// 3) Vidljivost materijala: stvarni izvor iz admin.html se izvršava uz fiksne
+//    učenike — admin u tabeli mora tačno vidjeti ko vidi koji materijal.
+// ════════════════════════════════════════════════════════════════════════════
+function visibilityHarness() {
+  // normRazred / materialVisibleTo / visibilityBadge su čiste funkcije u
+  // stranici; izvor je originalni kod iz admin.html, bez prepravki.
+  const src = ['normRazred', 'materialVisibleTo', 'visibilityBadge']
+    .map(n => extractFunctionSource(adminCode, n)).join('\n');
+  const script = new vm.Script(
+    `(function () {\n${src}\nreturn { normRazred, materialVisibleTo, visibilityBadge };\n})()`
+  );
+  return script.runInContext(vm.createContext({}));
+}
+
+const VIS_STUDENTS = [
+  { id: 'u1', displayName: 'Ana',  razred: 'III-T5' },
+  { id: 'u2', displayName: 'Bojan', razred: 'iii t5' },   // mala slova + razmak
+  { id: 'u3', displayName: 'Ceca', razred: 'III T5' },    // razmak umjesto crtice
+  { id: 'u4', displayName: 'Dino', razred: 'IV-T5' },
+  { id: 'u5', displayName: 'Ena',  razred: '' },          // bez razreda
+];
+
+test('admin.html: normRazred je identičan serverskom normalizeRazred', async () => {
+  const { normalizeRazred } = await import('../lib/materials.js');
+  const { normRazred } = visibilityHarness();
+  for (const v of ['III-T5', 'iii t5', 'III T5', ' iii–t5 ', 'IV-T5', '', null, undefined]) {
+    assert.equal(normRazred(v), normalizeRazred(v), `razlika za ${JSON.stringify(v)}`);
+  }
+});
+
+test('admin.html: materialVisibleTo pogađa ko vidi materijal', () => {
+  const { materialVisibleTo } = visibilityHarness();
+  // Array.from: vm kontekst ima svoj Array.prototype
+  const ids = m => Array.from(materialVisibleTo(m, VIS_STUDENTS)).map(s => s.id);
+
+  assert.deepEqual(ids({ razredi: ['III-T5'], visible: true }), ['u1', 'u2', 'u3']);
+  assert.deepEqual(ids({ razredi: [], visible: true }), ['u1', 'u2', 'u3', 'u4', 'u5']);
+  assert.deepEqual(ids({ razredi: ['III-T5'], visible: false }), []);
+  assert.deepEqual(ids({ razredi: ['III-T6'], visible: true }), [], 'niko nije III-T6');
+  assert.deepEqual(ids({ razredi: ['IV-T5'], visible: true }), ['u4']);
+  assert.deepEqual(ids(null, VIS_STUDENTS), []);
+});
+
+test('admin.html: visibilityBadge upozorava kad materijal ne vidi niko', () => {
+  const { visibilityBadge } = visibilityHarness();
+
+  const ok = visibilityBadge({ razredi: ['III-T5'], visible: true }, VIS_STUDENTS);
+  assert.match(ok, /3\/5/);
+
+  const none = visibilityBadge({ razredi: ['III-T6'], visible: true }, VIS_STUDENTS);
+  assert.match(none, /ne vidi niko/);
+  assert.match(none, /0\/5/);
+
+  const hidden = visibilityBadge({ razredi: [], visible: false }, VIS_STUDENTS);
+  assert.match(hidden, /sakriveno/);
+});
+
+test('admin.html: modal ima brojač vidljivosti, učenici bez razreda su označeni', () => {
+  assert.match(adminHtml, /id="mm-vis"/, 'modal mora imati #mm-vis brojač');
+  assert.match(adminCode, /updateMaterialVisibility\(\)/, 'brojač se mora osvježavati');
+  assert.match(adminHtml, /bez razreda/, 'učenik bez razreda mora biti vidljivo označen');
+});
+
+test('student.html: upozorenje kad učenik nema razred', () => {
+  const studentHtml = read('public/pages/student.html');
+  assert.match(studentHtml, /id="mat-no-razred"/, 'mora postojati #mat-no-razred upozorenje');
+  assert.match(studentHtml, /Nemate postavljen razred/, 'poruka mora objašnjavati uzrok');
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// 4) Nijedna stranica ne smije zvati nedefinisanu funkciju
 // ════════════════════════════════════════════════════════════════════════════
 const PAGES = ['public/pages/admin.html', 'public/pages/student.html'];
 
