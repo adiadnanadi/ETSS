@@ -307,6 +307,27 @@ test('student.html: upozorenje kad učenik nema razred', () => {
   assert.match(studentHtml, /Nemate postavljen razred/, 'poruka mora objašnjavati uzrok');
 });
 
+test('student.html: nedostajući logout element ne smije prekinuti inicijalizaciju literature', () => {
+  // Regresija stvarnog uzroka praznog taba: stranica je radila
+  // document.getElementById('logout-btn').onclick = ... iako taj element nije
+  // postojao. TypeError je zaustavljao modul prije `let materials`, pa auth
+  // callback nije mogao prikazati ni materijal ni empty/error poruku.
+  assert.match(studentHtml, /id="logout-btn"/, '#logout-btn koji skripta povezuje mora postojati');
+  assert.doesNotMatch(studentCode,
+    /document\.getElementById\(['"]logout-btn['"]\)\.onclick\s*=/,
+    'event handler se ne smije postavljati direktno na mogući null');
+  assert.match(studentCode, /if\s*\(logoutBtn\)\s*\{[\s\S]*?logoutBtn\.addEventListener\(/,
+    'logout povezivanje mora biti null-safe');
+
+  const stateIdx = studentCode.indexOf('let materials = []');
+  const authIdx  = studentCode.indexOf('onAuthStateChanged(auth');
+  assert.ok(stateIdx > -1 && stateIdx < authIdx,
+    'stanje literature mora biti inicijalizovano prije auth callbacka');
+
+  assert.match(studentHtml, /id="materials-grid"[\s\S]*?Učitavanje literature…/,
+    'početna poruka mora postojati i bez izvršenog JavaScripta');
+});
+
 // ════════════════════════════════════════════════════════════════════════════
 // 3b) student.html: literatura se učitava NEZAVISNO od ostatka stranice, a
 //     greška pri učitavanju mora biti VIDILJIVA (ne samo u konzoli).
@@ -320,12 +341,12 @@ test('student.html: loadMaterials() ne visi na kraju loadData()', () => {
   assert.doesNotMatch(loadDataSource, /(?<![.\w$])loadMaterials\s*\(/,
     'pad bilo kog Firestore upita u loadData() ne smije ostaviti literaturu praznom');
 
-  const authIdx  = studentCode.indexOf('onAuthStateChanged');
+  const authIdx  = studentCode.indexOf('onAuthStateChanged(auth');
   const loadIdx  = studentCode.indexOf('await loadData()');
   assert.ok(authIdx > -1 && loadIdx > -1, 'onAuthStateChanged i loadData() moraju postojati');
   const handler = stripLiterals(studentCode.slice(authIdx, loadIdx));
-  assert.match(handler, /(?<![.\w$])loadMaterials\s*\(\)/,
-    'loadMaterials() se mora zvati direktno iz onAuthStateChanged, nezavisno od loadData()');
+  assert.match(handler, /(?<![.\w$])loadMaterials\s*\(\s*u\s*\)/,
+    'loadMaterials(u) se mora zvati direktno iz onAuthStateChanged, nezavisno od loadData()');
 });
 
 test('student.html: loadMaterials je izložena na window (inline onclick "Pokušaj ponovo")', () => {
@@ -434,5 +455,17 @@ for (const page of PAGES) {
     const code = stripLiterals(inlineScripts(read(page)).join('\n'));
     const missing = [...calledNames(code)].filter(n => !definedNames(code).has(n) && !GLOBALS.has(n)).sort();
     assert.deepEqual(missing, [], `pozvane su funkcije koje nigdje nisu definisane: ${missing.join(', ')}`);
+  });
+
+  test(`${page}: svi statički getElementById ciljevi postoje u HTML-u`, () => {
+    const html = read(page);
+    const ids = new Set([...html.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)].map(m => m[1]));
+    const referenced = new Set(
+      [...inlineScripts(html).join('\n').matchAll(/getElementById\(\s*["']([^"']+)["']\s*\)/g)]
+        .map(m => m[1])
+    );
+    const missing = [...referenced].filter(id => !ids.has(id)).sort();
+    assert.deepEqual(missing, [],
+      `getElementById ciljevi ne postoje; direktan pristup može prekinuti cijeli modul: ${missing.join(', ')}`);
   });
 }

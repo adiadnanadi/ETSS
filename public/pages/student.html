@@ -61,6 +61,30 @@
       pointer-events: none;
     }
     .hero-content { position: relative; z-index: 1; }
+    .student-logout {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,.04);
+      color: #94A3B8;
+      font-family: var(--jk);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .student-logout:hover {
+      color: #fff;
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.18);
+    }
+    .student-logout svg { width: 17px; height: 17px; }
     .hero-greeting { 
       font-size: 14px; 
       font-weight: 600; 
@@ -468,10 +492,12 @@
     }
     @media (max-width: 600px) {
       .stats-row { grid-template-columns: 1fr; margin-top: 0; }
-      .hero-title { font-size: 24px; }
+      .hero-title { font-size: 24px; padding-right: 48px; }
+      .student-logout { padding: 10px; }
+      .student-logout span { display: none; }
       .quiz-grid { grid-template-columns: 1fr; }
-      .tabs-v2 { width: 100%; }
-      .tab-v2 { flex: 1; justify-content: center; font-size: 13px; padding: 10px 12px; }
+      .tabs-v2 { width: 100%; overflow-x: auto; }
+      .tab-v2 { flex: 0 0 auto; justify-content: center; font-size: 13px; padding: 10px 12px; }
     }
 
     /* ── LEADERBOARD ─────────────────────────────────── */
@@ -556,6 +582,10 @@
 <!-- HERO SECTION -->
 <section class="hero">
   <div class="wrap hero-content">
+    <button class="student-logout" id="logout-btn" type="button" aria-label="Odjavi se">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Odjavi se</span>
+    </button>
     <div class="hero-greeting" id="greeting-time">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Dobro jutro
@@ -671,7 +701,17 @@
         <option value="">Svi predmeti</option>
       </select>
     </div>
-    <div class="quiz-grid" id="materials-grid"></div>
+    <!-- Početna poruka je namjerno u samom HTML-u. Ako JavaScript ili mreža
+         zakažu, tab Literatura više nikada ne ostaje potpuno prazan. -->
+    <div class="quiz-grid" id="materials-grid" aria-live="polite">
+      <div class="empty-state-v2" style="grid-column: 1/-1">
+        <div class="empty-icon-v2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="empty-title">Učitavanje literature…</div>
+        <div class="empty-desc">Provjeravamo materijale dostupne vašem razredu.</div>
+      </div>
+    </div>
   </div>
 
   <!-- TAB: LEADERBOARD -->
@@ -697,6 +737,13 @@
   let myResults = [], uid = null, userData = null;
   let allResults = [], allStudents = [];
 
+  // Stanje literature mora biti inicijalizovano prije registracije auth
+  // callbacka. Tako eventualna greška u kasnijem UI povezivanju ne može
+  // ostaviti callback sa varijablama u temporal dead zone-u.
+  let materials = [];
+  let materialsLoaded = false;
+  let materialsError = null;
+
   onAuthStateChanged(auth, async (u) => {
     if (!u) { window.location.href = '/login'; return; }
     if (!u.emailVerified) { await signOut(auth); window.location.href = '/login'; return; }
@@ -713,7 +760,9 @@
     // Literatura se učitava NEZAVISNO od ostalih podataka: prije je loadMaterials()
     // visio na kraju loadData(), pa je pad bilo kog Firestore upita (kvizovi,
     // rezultati, korisnici) ostavljao tab Literatura potpuno prazan, bez poruke.
-    loadMaterials();
+    // Prosleđujemo baš korisnika koji je pokrenuo callback, umjesto oslanjanja
+    // na auth.currentUser koji se može promijeniti tokom asinhronog učitavanja.
+    loadMaterials(u);
 
     try {
       await loadData();
@@ -780,7 +829,15 @@
     }
   };
 
-  document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = '/login');
+  // Ranije #logout-btn nije postojao u HTML-u. Direktno postavljanje `.onclick`
+  // na null je prekidalo izvršavanje cijelog modula prije inicijalizacije
+  // literature, pa učenik nije vidio ni fajlove ni poruku o praznoj listi.
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () =>
+      signOut(auth).then(() => { window.location.href = '/login'; })
+    );
+  }
 
   async function loadData() {
     const [qSnap, rSnap, allRSnap, allUSnap] = await Promise.all([
@@ -819,10 +876,6 @@
   }
 
   // ── LITERATURA ────────────────────────────────────────────────────
-  let materials = [];
-  let materialsLoaded = false;
-  let materialsError = null;
-
   async function loadMaterials(passedUser = null) {
     const grid = document.getElementById('materials-grid');
     // Pokaži loading stanje odmah, da tab ne ostane potpuno prazan.
