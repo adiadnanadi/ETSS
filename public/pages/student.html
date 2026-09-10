@@ -715,7 +715,18 @@
     // rezultati, korisnici) ostavljao tab Literatura potpuno prazan, bez poruke.
     loadMaterials();
 
-    await loadData();
+    try {
+      await loadData();
+    } catch(e) {
+      console.warn('loadData greška (literatura ostaje dostupna):', e.message);
+      // I dalje prikaži osnovne statistike kao prazne, da stranica ne ostane prazna
+      try {
+        document.getElementById('s-avail').textContent = '—';
+        document.getElementById('s-done').textContent = '—';
+        document.getElementById('s-avg').textContent = '—';
+        document.getElementById('s-best').textContent = '—';
+      } catch {}
+    }
     initEventListeners();
   });
 
@@ -758,6 +769,15 @@
     document.getElementById('tab-results').style.display = tab === 'results' ? 'block' : 'none';
     document.getElementById('tab-materials').style.display = tab === 'materials' ? 'block' : 'none';
     document.getElementById('tab-leaderboard').style.display = tab === 'leaderboard' ? 'block' : 'none';
+    // Kad se otvori literatura, osvježi prikaz (filteri, poruka) i ako nikad nije učitana, pokušaj ponovo
+    if (tab === 'materials') {
+      try {
+        const notLoaded = (typeof materialsLoaded === 'undefined') ? true : !materialsLoaded;
+        const hasError  = (typeof materialsError !== 'undefined') ? !!materialsError : false;
+        if (notLoaded && !hasError) loadMaterials();
+        else renderMaterials();
+      } catch {}
+    }
   };
 
   document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = '/login');
@@ -800,27 +820,58 @@
 
   // ── LITERATURA ────────────────────────────────────────────────────
   let materials = [];
+  let materialsLoaded = false;
+  let materialsError = null;
 
-  async function loadMaterials() {
+  async function loadMaterials(passedUser = null) {
+    const grid = document.getElementById('materials-grid');
+    // Pokaži loading stanje odmah, da tab ne ostane potpuno prazan.
+    // Koristimo typeof da test-harness (koji definiše samo `materials`) ne pukne.
+    const _isFirstLoad = (typeof materialsLoaded === 'undefined') ? true : !materialsLoaded;
+    if (grid && _isFirstLoad) {
+      try {
+        grid.innerHTML = `
+          <div class="empty-state-v2" style="grid-column: 1/-1">
+            <div class="empty-icon-v2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="empty-title">Učitavanje literature…</div>
+            <div class="empty-desc">Molimo sačekajte</div>
+          </div>`;
+      } catch {}
+    }
+
     try {
-      const token = await auth.currentUser.getIdToken();
+      const userForToken = passedUser || (typeof auth !== 'undefined' ? auth.currentUser : null);
+      if (!userForToken) throw new Error('Niste prijavljeni (auth)');
+      const token = await userForToken.getIdToken();
       const res   = await fetch('/api/materials', { headers: { Authorization: 'Bearer ' + token } });
-      const data  = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Greška');
-      materials = data.materials || [];
+      const data  = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Greška ${res.status}`);
+      materials = Array.isArray(data.materials) ? data.materials : [];
+      if (typeof materialsLoaded !== 'undefined') materialsLoaded = true;
+      if (typeof materialsError !== 'undefined') materialsError = null;
     } catch(e) {
-      // Ranije se ovo samo logovalo u konzolu, pa je učenik na tabu vidio
-      // "Nema materijala" — kao da literatura stvarno ne postoji.
       materials = [];
-      console.warn('materials:', e.message);
-      renderMaterialsError(e.message);
+      if (typeof materialsLoaded !== 'undefined') materialsLoaded = true;
+      if (typeof materialsError !== 'undefined') materialsError = e?.message || 'Nepoznata greška';
+      console.warn('materials:', e?.message || e);
+      // renderMaterialsError je definisana u stranici, ali u test-harnessu je stub
+      try { renderMaterialsError(e?.message || 'Greška'); } catch {}
       return;
     }
-    const sel = document.getElementById('mat-subject');
-    const predmeti = [...new Set(materials.map(m => m.subject).filter(Boolean))].sort();
-    while (sel.options.length > 1) sel.remove(1);
-    predmeti.forEach(p => sel.appendChild(new Option(p, p)));
-    renderMaterials();
+
+    try {
+      const sel = document.getElementById('mat-subject');
+      if (sel) {
+        const predmeti = [...new Set(materials.map(m => m.subject).filter(Boolean))].sort();
+        while (sel.options.length > 1) sel.remove(1);
+        predmeti.forEach(p => sel.appendChild(new Option(p, p)));
+      }
+    } catch(e) {
+      console.warn('mat-subject populate:', e.message);
+    }
+    try { renderMaterials(); } catch {}
   }
 
   // Greška pri učitavanju literature mora biti VIDILJIVA na stranici, ne samo u
@@ -830,7 +881,9 @@
     const msg = String(message || 'Nepoznata greška').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const noRz = document.getElementById('mat-no-razred');
     if (noRz) noRz.style.display = 'none';
-    document.getElementById('materials-grid').innerHTML = `
+    const grid = document.getElementById('materials-grid');
+    if (!grid) return;
+    grid.innerHTML = `
       <div class="empty-state-v2" style="grid-column: 1/-1">
         <div class="empty-icon-v2">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -853,13 +906,19 @@
   // Čitanje ide kroz našu viewer stranicu (PDF se odmah prikaže u browseru),
   // a preuzimanje ide direktno na fajl. Učenik NE mora imati Google nalog.
   window.openMaterialFile = async (id, download) => {
-    const token = await auth.currentUser.getIdToken();
-    const url = `/api/materials/${id}/file?token=${encodeURIComponent(token)}${download ? '&download=1' : '&inline=1'}`;
-    if (download) {
-      const a = document.createElement('a');
-      a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
-    } else {
-      window.open(`/viewer?id=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`, '_blank');
+    try {
+      const userForToken = auth.currentUser;
+      if (!userForToken) throw new Error('Niste prijavljeni');
+      const token = await userForToken.getIdToken();
+      const url = `/api/materials/${id}/file?token=${encodeURIComponent(token)}${download ? '&download=1' : '&inline=1'}`;
+      if (download) {
+        const a = document.createElement('a');
+        a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
+      } else {
+        window.open(`/viewer?id=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`, '_blank');
+      }
+    } catch(e) {
+      toast('Ne mogu otvoriti fajl: ' + (e.message || 'greška'), 'error');
     }
   };
 
@@ -870,26 +929,67 @@
 
   window.renderMaterials = () => {
     const grid    = document.getElementById('materials-grid');
-    const search  = (document.getElementById('mat-search').value || '').toLowerCase();
-    const subject = document.getElementById('mat-subject').value;
+    if (!grid) return;
+    const searchEl  = document.getElementById('mat-search');
+    const subjectEl = document.getElementById('mat-subject');
+    const search  = (searchEl?.value || '').toLowerCase().trim();
+    const subject = subjectEl?.value || '';
 
     const noRz = document.getElementById('mat-no-razred');
-    if (noRz) noRz.style.display = userData?.razred ? 'none' : 'flex';
+    const hasRazred = !!(userData?.razred && String(userData.razred).trim());
+    if (noRz) noRz.style.display = hasRazred ? 'none' : 'flex';
 
-    const list = materials.filter(m => {
+    // Ako je učitavanje završilo sa greškom, ne prepisujemo error poruku praznim stanjem
+    const _hasError = (typeof materialsError !== 'undefined') ? !!materialsError : false;
+    if (_hasError && materials.length === 0) {
+      try {
+        if (grid.innerHTML.includes('Literatura se nije učitala')) return;
+      } catch {}
+    }
+
+    const list = (Array.isArray(materials) ? materials : []).filter(m => {
       if (subject && m.subject !== subject) return false;
-      if (search && !(`${m.title} ${m.subject || ''} ${m.description || ''}`.toLowerCase().includes(search))) return false;
+      if (search && !(`${m.title || ''} ${m.subject || ''} ${m.description || ''}`.toLowerCase().includes(search))) return false;
       return true;
     });
 
+    // Razlikujemo 3 slučaja praznog prikaza, da učenik UVIJEK vidi poruku:
+    // 1) server vratio 0 materijala (nema za njegov razred ili nema uopšte)
+    // 2) ima materijala ali filter (pretraga/predmet) ih je sve sakrio
+    // 3) učenik nema razred
     if (!list.length) {
+      const totalFromServer = Array.isArray(materials) ? materials.length : 0;
+      let title = 'Nema materijala';
+      let desc = '';
+      let showDebug = '';
+
+      if (totalFromServer === 0) {
+        if (!hasRazred) {
+          title = 'Nemate postavljen razred';
+          desc = 'Zato ne vidite materijale koji su namijenjeni određenom razredu. Javite se nastavniku da vam upiše razred (npr. III-T5). Materijali označeni kao „Svi razredi“ bi se vidjeli i bez razreda.';
+        } else {
+          title = 'Nema literature za vaš razred';
+          desc = `Vaš razred je <b>${String(userData.razred).replace(/</g,'&lt;')}</b>. Nastavnik još nije dodao materijale za ovaj razred, ili su materijali sakriveni. Ako mislite da bi trebali vidjeti literaturu, javite se nastavniku da provjeri da li je označio razred <b>${String(userData.razred).replace(/</g,'&lt;')}</b> pri dodavanju.`;
+          const _loaded = (typeof materialsLoaded !== 'undefined') ? !!materialsLoaded : true;
+          if (_loaded) {
+            showDebug = `<div style="margin-top:12px;font-size:11px;color:#475569;font-family:var(--mono)">Server vratio 0 materijala za vaš nalog.</div>`;
+          }
+        }
+      } else {
+        // Ima materijala sa servera, ali ih je filter sakrio
+        title = 'Nema rezultata za filter';
+        desc = `Pronađeno ${totalFromServer} materijala, ali nijedan ne odgovara pretrazi${subject ? ` (predmet: ${subject})` : ''}${search ? ` (pojam: "${search.replace(/</g,'&lt;')}")` : ''}. Očistite pretragu.`;
+      }
+
       grid.innerHTML = `
         <div class="empty-state-v2" style="grid-column: 1/-1">
           <div class="empty-icon-v2">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           </div>
-          <div class="empty-title">Nema materijala</div>
-          <div class="empty-desc">${userData?.razred ? 'Nastavnik još nije dodao literaturu za vaš razred.' : 'Nemate postavljen razred — javite se nastavniku da ga upiše.'}</div>
+          <div class="empty-title">${title}</div>
+          <div class="empty-desc">${desc}</div>
+          ${showDebug}
+          ${(search || subject) ? `<button class="btn-secondary-v2" style="margin:18px auto 0" onclick="document.getElementById('mat-search').value='';document.getElementById('mat-subject').value='';renderMaterials()">Očisti filtere</button>` : ''}
         </div>`;
       return;
     }
