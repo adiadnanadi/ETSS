@@ -12,6 +12,8 @@ services:
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
       # ── Literatura na Google Drive (vidi README, sekcija 4) ──
+      # Najlakše: poveži Drive iz admin panela (Literatura → "Poveži Google Drive")
+      # i onda ove varijable ne moraju postojati. Ako ih ipak postaviš, imaju prioritet.
       # Varijanta A — tvoj lični Drive (npm run drive:auth)
       - key: GOOGLE_OAUTH_CLIENT_ID
         sync: false
@@ -29,6 +31,3 @@ services:
         value: "1"
       - key: MATERIALS_MAX_MB
         value: "20"
-      # Rezervno skladište u Firestore-u (automatski ako Drive nije povezan)
-      - key: FALLBACK_FIRESTORE
-        value: "1"

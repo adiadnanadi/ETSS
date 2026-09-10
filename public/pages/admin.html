@@ -1664,85 +1664,184 @@ async function authHeaders() {
   return { Authorization: 'Bearer ' + t };
 }
 
-let storageInfo = null;
+let driveInfo = null;
+let driveParamsHandled = false;
 
-async function loadMaterials() {
-  try {
-    const res  = await fetch('/api/materials', { headers: await authHeaders() });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Greška');
-    materials = data.materials || [];
-  } catch(e) {
-    materials = [];
-    console.warn('materials:', e.message);
-  }
-  const cnt = document.getElementById('sb-mat-count');
-  if (cnt) cnt.textContent = materials.length;
-  populateMaterialFilters();
-  filterMaterials();
-  loadStorageStatus();
-}
-
-// Prikazuje gdje fajlovi odlaze (Google Drive) i upozori ako Drive nije povezan
-async function loadStorageStatus() {
+// ── GOOGLE DRIVE: status i povezivanje iz panela ─────────────────────────────
+async function loadDriveStatus(force = false) {
   const el = document.getElementById('store-banner');
   if (!el) return;
   try {
-    const res  = await fetch('/api/storage/status', { headers: await authHeaders() });
+    const res  = await fetch('/api/drive/status', { headers: await authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Greška');
-    storageInfo = data;
+    driveInfo = data;
   } catch(e) {
-    storageInfo = null;
+    driveInfo = null;
+    el.innerHTML = `<div class="card" style="padding:16px 18px;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.07)">
+      <div style="font-size:13px;color:#FCA5A5">Ne mogu provjeriti Google Drive: ${e.message}</div>
+    </div>`;
     return;
   }
 
-  const drive = storageInfo?.drive;
-  const maxMb = `${storageInfo?.maxUploadMb || 20} MB`;
-  const maxEl = document.getElementById('mm-max'); if (maxEl) maxEl.textContent = storageInfo?.maxUploadMb || 20;
+  const maxEl = document.getElementById('mm-max');
+  if (maxEl) maxEl.textContent = driveInfo.maxUploadMb || 20;
 
+  if (driveInfo.connected) renderDriveConnected();
+  else renderDriveSetup();
+
+  handleDriveRedirectParams();
+}
+
+function renderDriveConnected() {
+  const el = document.getElementById('store-banner');
+  const d  = driveInfo || {};
   const chip = (color, text) =>
     `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${color};background:${color}1A;border:1px solid ${color}33;border-radius:999px;padding:4px 10px">${text}</span>`;
-
   const kv = (label, value) =>
     `<div style="display:flex;gap:8px;font-size:12.5px;color:#94A3B8"><span style="color:#64748B">${label}</span><span style="color:#CBD5E1;font-weight:600">${value}</span></div>`;
 
-  if (drive && drive.connected) {
-    const quota = drive.storage && drive.storage.limit
-      ? `${fmtSize(drive.storage.usage)} / ${fmtSize(drive.storage.limit)}`
-      : (drive.storage ? `${fmtSize(drive.storage.usage)} iskorišteno` : '—');
-    const note  = drive.folder && drive.folder.error
-      ? `<div style="font-size:12px;color:#F59E0B;margin-top:10px">⚠️ Folder: ${drive.folder.error}</div>`
-      : '';
-    el.innerHTML = `<div class="card" style="padding:16px 18px">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        ${chip('#22C55E', '● Google Drive povezan')}
-        ${chip('#3B82F6', (drive.mode === 'oauth' ? 'Tvoj lični Drive' : 'Service account') + ' · ' + maxMb)}
-        ${drive.name || drive.email ? `<span style="font-size:12.5px;color:#64748B">${drive.email || drive.name}</span>` : ''}
-      </div>
-      <div style="display:flex;gap:22px;flex-wrap:wrap">
-        ${kv('Lokacija:', drive.folder ? (drive.folder.name || 'folder') : 'Google Drive')}
-        ${kv('Zauzeće:', quota)}
-        ${kv('Novi fajlovi:', 'id u Google Drive')}
-      </div>${note}
-    </div>`;
-  } else {
-    const err = drive?.error || 'Google Drive nije povezan.';
-    el.innerHTML = `<div class="card" style="padding:16px 18px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.07)">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-        ${chip('#F59E0B', '● Drive nije povezan')}
-        ${chip('#94A3B8', 'Fajlovi: ' + (storageInfo?.activeLabel || 'rezervno skladište'))}
-      </div>
-      <div style="font-size:12.5px;color:#CBD5E1;line-height:1.7">
-        ${err}<br/>
-        Poveži Drive tako što ćeš na Renderu (Environment) dodati
-        <code style="font-family:monospace">GOOGLE_SERVICE_ACCOUNT</code> (JSON service account) i
-        <code style="font-family:monospace">GDRIVE_FOLDER_ID</code> — detalji u README-u, sekcija
-        <b>Google Drive</b>. Do tada fajlovi rade, ali se ne pojavljuju na Drive-u.
-      </div>
-    </div>`;
-  }
+  const quota = d.storage && d.storage.limit
+    ? `${fmtSize(d.storage.usage)} / ${fmtSize(d.storage.limit)}`
+    : (d.storage ? `${fmtSize(d.storage.usage)} iskorišteno` : '—');
+  const folderNote = d.folder && d.folder.error
+    ? `<div style="font-size:12px;color:#F59E0B;margin-top:10px">⚠️ Folder: ${d.folder.error}</div>`
+    : '';
+
+  el.innerHTML = `<div class="card" style="padding:16px 18px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      ${chip('#22C55E', '● Google Drive povezan')}
+      ${chip('#3B82F6', (d.mode === 'oauth' ? 'Tvoj lični Drive' : 'Service account'))}
+      ${d.email ? `<span style="font-size:12.5px;color:#64748B">${d.email}</span>` : ''}
+      <span style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn2 btn2-ghost btn2-sm" onclick="loadDriveStatus(true)">Provjeri vezu</button>
+        ${d.folder && d.folder.id ? `<button class="btn2 btn2-ghost btn2-sm" onclick="window.open('https://drive.google.com/drive/folders/${d.folder.id}','_blank')">Otvori folder</button>` : ''}
+        <button class="btn2 btn2-danger btn2-sm" onclick="driveDisconnect()">Prekini vezu</button>
+      </span>
+    </div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap">
+      ${kv('Folder:', d.folder ? (d.folder.name || 'folder') : 'Korijen Drive-a')}
+      ${kv('Zauzeće:', quota)}
+      ${kv('Novi fajlovi:', 'Google Drive')}
+    </div>${folderNote}
+    <div style="font-size:11.5px;color:#64748B;margin-top:10px">
+      Materijali se čuvaju na Google Drive-u pod nazivom koji upišeš. Ništa se ne čuva u bazi.
+    </div>
+  </div>`;
 }
+
+function renderDriveSetup() {
+  const el  = document.getElementById('store-banner');
+  const uri = (driveInfo && driveInfo.redirectUri) || (location.origin + '/api/drive/connect/callback');
+  el.innerHTML = `<div class="card" style="padding:18px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.06)">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F59E0B;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:4px 10px">● Google Drive nije povezan</span>
+      <span style="font-size:12.5px;color:#94A3B8">Poveži ga jednom — posle sve ide samo klikom na „Dodaj materijal".</span>
+    </div>
+
+    <div style="font-size:13px;color:#CBD5E1;line-height:1.9;margin-top:10px">
+      <b>1.</b> Otvori
+      <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener" style="color:#7EB8FF">Google Drive API</a>
+      u projektu <b>kviz-13f52</b> i klikni <b>Enable</b> (ako već nije uključen).<br/>
+      <b>2.</b> Otvori
+      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color:#7EB8FF">Credentials</a>
+      → <b>Create credentials</b> → <b>OAuth client ID</b> → tip <b>Web application</b>.<br/>
+      <b>3.</b> U polje <b>Authorized redirect URIs</b> zalijepi ovaj link i sačuvaj:
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin:10px 0 14px;flex-wrap:wrap">
+      <code id="drive-redirect-uri" style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 11px;color:#CBD5E1">${uri}</code>
+      <button class="btn2 btn2-ghost btn2-sm" onclick="copyRedirectUri()">Kopiraj</button>
+    </div>
+
+    <div style="font-size:13px;color:#CBD5E1;margin-bottom:8px"><b>4.</b> Zalijepi ovdje Client ID i Client Secret iz tog istog ekrana:</div>
+    <div class="row2" style="margin-bottom:10px">
+      <div class="fg2"><label>Client ID</label><input class="inp2" id="drive-client-id" placeholder="123456-abc.apps.googleusercontent.com"/></div>
+      <div class="fg2"><label>Client Secret</label><input class="inp2" id="drive-client-secret" type="password" placeholder="GOCSPX-..."/></div>
+    </div>
+    <div class="fg2" style="margin-bottom:12px">
+      <label>Folder na Drive-u (opciono)</label>
+      <input class="inp2" id="drive-folder-id" placeholder="ID iz linka: drive.google.com/drive/folders/OVO_JE_ID"/>
+      <div style="font-size:11.5px;color:#64748B;margin-top:6px">Ako ostaviš prazno, fajlovi idu u korijen Drive-a.</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn2 btn2-primary" id="drive-connect-btn" onclick="driveConnect()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Poveži Google Drive
+      </button>
+      <span style="font-size:12px;color:#64748B">Otvorit će se Google prijava — odaberi svoj nalog i dozvoli pristup.</span>
+    </div>
+
+    <div style="font-size:11.5px;color:#64748B;margin-top:12px">
+      Fajlovi ostaju na tvom Drive-u. Pristup se može prekinuti u svakom trenutku (dugme „Prekini vezu").
+    </div>
+  </div>`;
+}
+
+function driveRedirectToast() {
+  const params = new URLSearchParams(location.search);
+  const state  = params.get('drive');
+  if (!state) return;
+  if (state === 'connected') {
+    const acc = params.get('account');
+    toast('Google Drive povezan' + (acc ? ': ' + acc : ''), 'success');
+  } else if (state === 'error') {
+    toast('Drive nije povezan: ' + (params.get('msg') || 'greška'), 'error');
+  }
+  history.replaceState(null, '', location.pathname);
+}
+
+function handleDriveRedirectParams() {
+  if (driveParamsHandled) return;
+  driveParamsHandled = true;
+  driveRedirectToast();
+}
+
+window.copyRedirectUri = async () => {
+  const uri = document.getElementById('drive-redirect-uri')?.textContent?.trim();
+  if (!uri) return;
+  try { await navigator.clipboard.writeText(uri); toast('Link kopiran — zalijepi ga u Google Console','success'); }
+  catch { window.prompt('Kopiraj link:', uri); }
+};
+
+window.driveConnect = async () => {
+  const btn    = document.getElementById('drive-connect-btn');
+  const clientId     = document.getElementById('drive-client-id')?.value.trim();
+  const clientSecret = document.getElementById('drive-client-secret')?.value.trim();
+  const folderId     = document.getElementById('drive-folder-id')?.value.trim() || '';
+
+  if (!clientId || !clientSecret) { toast('Unesi Client ID i Client Secret','error'); return; }
+
+  btnLoad(btn, 'Otvaram Google...');
+  try {
+    const res  = await fetch('/api/drive/connect', {
+      method: 'POST',
+      headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ clientId, clientSecret, folderId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Greška');
+    window.location.href = data.url;      // Google prijava → vraća na naš callback
+  } catch(e) {
+    toast('Greška: ' + e.message, 'error');
+    btnReset(btn);
+  }
+};
+
+window.driveDisconnect = () => {
+  confirmAction('Prekini vezu sa Drive-om',
+    'Materijali <b>ostaju</b> na Drive-u, ali stranica im neće moći pristupiti dok se ponovo ne povežeš.',
+    async () => {
+      try {
+        const res  = await fetch('/api/drive/disconnect', { method:'POST', headers: await authHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Greška');
+        toast('Veza prekinuta','success');
+        await loadDriveStatus(true);
+      } catch(e) { toast('Greška: ' + e.message,'error'); }
+    });
+};
 
 function populateMaterialFilters() {
   const predmeti = [...new Set(materials.map(m=>m.subject).filter(Boolean))].sort();
@@ -1874,11 +1973,11 @@ window.openMaterialModal = (id = null) => {
 
   const note = document.getElementById('mm-store-note');
   if (note) {
-    const active = storageInfo?.drive?.connected;
+    const active = driveInfo?.connected;
     note.innerHTML = m
       ? (m.drive ? 'Fajl je na Google Drive-u — izmjena naziva se prenosi i tamo.' : 'Fajl je u internoj bazi.')
       : (active ? 'Fajl se uplouduje direktno na tvoj Google Drive — ne moraš ručno ništa stavljati tamo.'
-                : '⚠️ Google Drive nije povezan — fajl ide u rezervno skladište dok se Drive ne poveže.');
+                : '⚠️ Google Drive nije povezan — prvo ga poveži u ovom tabu (gore), pa onda dodaj materijal.');
   }
 
   const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];

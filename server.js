@@ -9,12 +9,13 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
-import { createFirestoreStore } from './lib/file-store.js';
 import { createStorageStore } from './lib/storage-store.js';
-import { createDriveClient, readDriveConfig, driveMode } from './lib/drive.js';
+import { readDriveConfig } from './lib/drive.js';
+import { createDriveController } from './lib/drive-controller.js';
 import { createDriveStore } from './lib/drive-store.js';
-import { register, resolveStore, primaryStore, storeForMaterial, storageSummary } from './lib/file-stores.js';
+import { register, primaryStore, storeForMaterial } from './lib/file-stores.js';
 import { createMaterialsRouter } from './lib/materials-router.js';
+import { createDriveRouter } from './lib/drive-router.js';
 
 dotenv.config();
 
@@ -152,70 +153,66 @@ async function requireAdmin(req) {
   return u;
 }
 
-// ── Skladišta fajlova: Google Drive (glavno) + fallback ──────────────────────
-const driveCfg    = readDriveConfig();
-let   driveClient = null;
-let   driveInfo   = { connected: false, mode: 'off', error: null };
+// ════════════════════════════════════════════════════════════════════════════
+// SKLADIŠTE MATERIJALA: Google Drive
+//
+// Fajl se uplouduje sa naše stranice DIREKTNO na Google Drive vlasnika
+// (administratora). Nema Firebase Storage-a i nema čuvanja fajlova u bazi.
+//
+// Veza se uspostavlja iz admin panela (Literatura → "Poveži Google Drive")
+// ili, ako želiš, kredencijalima u env varijablama (GOOGLE_OAUTH_*).
+// ════════════════════════════════════════════════════════════════════════════
 
-if (driveMode(driveCfg) !== 'off') {
-  try {
-    driveClient = createDriveClient(driveCfg);
-    register(createDriveStore(driveClient), { priority: 1 });
-    driveInfo = { connected: true, mode: driveClient.mode, folderId: driveCfg.folderId || null, error: null };
+const SETTINGS_COLLECTION = 'settings';
+const DRIVE_DOC           = 'drive';
 
-    // Najčešća greška: isti (Firebase) servisni nalog se koristi i za Drive.
-    // Takav nalog nema Google kvotu za upload, pa odmah upozorimo u logu.
-    try {
-      const fb = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-      if (driveCfg.serviceAccount && fb.client_email && driveCfg.serviceAccount.client_email === fb.client_email) {
-        console.warn('⚠️  GOOGLE_SERVICE_ACCOUNT je isti kao FIREBASE_SERVICE_ACCOUNT — taj nalog NEMA kvotu za Drive upload.');
-        console.warn('   Preporuka: poveži lični Drive sa "npm run drive:auth" (README, sekcija 4, varijanta A).');
-      }
-    } catch { /* FIREBASE_SERVICE_ACCOUNT nije JSON — ignorisi */ }
-    console.log(`✅ Google Drive skladište aktivno (${driveClient.mode}${driveCfg.folderId ? ', folder ' + driveCfg.folderId : ''})`);
-  } catch (e) {
-    driveInfo = { connected: false, mode: driveMode(driveCfg), error: e.message };
-    console.warn('⚠️  Google Drive:', e.message);
+const drive = createDriveController({
+  envCfg: readDriveConfig(),
+  getSettings: async () => {
+    if (!adminDb) return null;
+    const snap = await adminDb.collection(SETTINGS_COLLECTION).doc(DRIVE_DOC).get();
+    return snap.exists ? snap.data() : null;
+  },
+  saveSettings: async (data) => {
+    if (!adminDb) throw new Error('Baza nije konfigurisana');
+    await adminDb.collection(SETTINGS_COLLECTION).doc(DRIVE_DOC).set(data, { merge: true });
+  },
+  clearSettings: async () => {
+    if (!adminDb) return;
+    await adminDb.collection(SETTINGS_COLLECTION).doc(DRIVE_DOC).delete().catch(() => {});
   }
-} else {
-  driveInfo = { connected: false, mode: 'off', error: 'Google Drive nije povezan (nema GOOGLE_SERVICE_ACCOUNT / GOOGLE_OAUTH_REFRESH_TOKEN)' };
-  console.warn('⚠️  Google Drive nije povezan — literatura koristi rezervno skladište.');
-}
+});
 
-const MATERIALS_STORE = (process.env.MATERIALS_STORE || '').toLowerCase();
-// Rezervno skladište: registruje se uvijek (osim FALLBACK_FIRESTORE=0), ali
-// prioritet 20 znači da se koristi samo ako Drive nije povezan ili ako
-// materijal u dokumentu kaže da mu je fajl tamo (fileStore: 'firestore').
-if (MATERIALS_STORE === 'firestore' || process.env.FALLBACK_FIRESTORE !== '0') {
-  if (adminDb) register(createFirestoreStore(adminDb), { priority: 20 });
-}
-if (adminBucket) register(createStorageStore(adminBucket), { priority: 90 });
+register(createDriveStore(() => drive.client()), { priority: 1 });
+if (adminBucket) register(createStorageStore(adminBucket), { priority: 90 });   // samo stari materijali
 
-async function materialsDriveStatus() {
-  if (!driveClient) return { ...driveInfo, configured: false };
-  try {
-    const ping = await driveClient.ping();
-    const out  = { ...driveInfo, configured: true, connected: true, email: ping?.email || null, name: ping?.name || null, storage: ping?.storage || null };
-    if (driveCfg.folderId) {
-      out.folder = await driveClient.folderInfo().catch(e => ({ error: e.message }));
-    }
-    return out;
-  } catch (e) {
-    return { ...driveInfo, configured: true, connected: false, error: e.message };
-  }
-}
+app.use(createDriveRouter({ requireAdmin, drive }));
 
 app.use(createMaterialsRouter({
   getDb:          () => adminDb,
-  storeForMaterial,                     // po materijalu (drive / firestore / storage)
-  primaryStore:   () => resolveStore(MATERIALS_STORE) || primaryStore(),
-  storageSummary: () => storageSummary(),
-  driveStatus:    materialsDriveStatus,
+  storeForMaterial,
+  primaryStore:   () => primaryStore(),
   maxUploadMb:    MAX_UPLOAD_MB,
   getUser,
   requireAdmin,
   upload
 }));
+
+// Na startu provjeri da li je Drive povezan (samo log, ne blokira server)
+setTimeout(() => {
+  if (!adminDb) return;
+  drive.status()
+    .then(st => {
+      if (st.connected) {
+        console.log(`✅ Google Drive povezan (${st.mode === 'oauth' ? 'lični Drive' : 'service account'})${st.email ? ' — ' + st.email : ''}`);
+      } else if (st.source) {
+        console.warn('⚠️  Google Drive:', st.error || 'kredencijali ne rade');
+      } else {
+        console.warn('⚠️  Google Drive nije povezan — otvori /admin → Literatura i klikni "Poveži Google Drive".');
+      }
+    })
+    .catch(() => {});
+}, 1500);
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS

@@ -77,8 +77,6 @@ async function boot({ seed = {}, bufferBytes = null } = {}) {
     getDb: () => db,
     storeForMaterial: (m) => (m.fileStore === 'firestore' ? bufferStore : driveStore),
     primaryStore: () => driveStore,
-    storageSummary: () => ({ activeKind: 'drive', activeLabel: 'Google Drive', stores: [] }),
-    driveStatus: async () => ({ connected: true, mode: 'oauth', email: 'nastavnik@gmail.com' }),
     maxUploadMb: 20,
     getUser,
     requireAdmin: async (req) => {
@@ -239,7 +237,7 @@ test('fajl: stream sa Drive-a uz podršku za Range i preuzimanje', async () => {
   } finally { await ctx.close(); }
 });
 
-test('fajl: Buffer store (interna baza) radi Range 206', async () => {
+test('fajl: store koji vraća Buffer radi Range 206/416 (rezerva za starije zapise)', async () => {
   const bytes = Buffer.from('0123456789abcdef');
   const ctx = await boot({ bufferBytes: bytes, seed: {
     'materials/m1': { title: 'U bazi', razredi: [], visible: true, ext: 'pdf', mimeType: 'application/pdf',
@@ -336,18 +334,36 @@ test('brisanje: briše i fajl iz skladišta i zapis u bazi', async () => {
   } finally { await ctx.close(); }
 });
 
-test('status skladišta: samo admin, pokazuje da je Drive povezan', async () => {
-  const ctx = await boot();
-  try {
-    const denied = await ctx.get('/api/storage/status', 'iii1-token');
-    assert.equal(denied.status, 403);
+test('bez povezanog Drive-a: upload vraća jasnu poruku, ništa se ne čuva u bazi', async () => {
+  const db = fakeFirestore();
+  const app = express();
+  app.use(express.json());
+  const upload = multer({ storage: multer.memoryStorage() });
+  app.use(createMaterialsRouter({
+    getDb: () => db,
+    storeForMaterial: () => null,          // Drive nije povezan
+    primaryStore: () => null,
+    getUser: async () => ({ uid: 'a1', role: 'admin', displayName: 'Profesor' }),
+    requireAdmin: async () => ({ uid: 'a1', role: 'admin', displayName: 'Profesor' }),
+    upload
+  }));
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(r => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
 
-    const { res, body } = await ctx.json('/api/storage/status', 'admin-token');
-    assert.equal(res.status, 200);
-    assert.equal(body.activeKind, 'drive');
-    assert.equal(body.drive.connected, true);
-    assert.equal(body.maxUploadMb, 20);
-  } finally { await ctx.close(); }
+  try {
+    const fd = new FormData();
+    fd.append('file', new Blob([PDF], { type: 'application/pdf' }), 'skripta.pdf');
+    const res  = await fetch(base + '/api/materials', { method: 'POST', body: fd });
+    const body = await res.json();
+
+    assert.equal(res.status, 503);
+    assert.match(body.error, /Drive nije povezan/i);
+    assert.match(body.error, /Poveži Google Drive/i);
+    assert.equal([...db._store.docs.keys()].length, 0, 'ništa se ne smije upisati u bazu');
+  } finally {
+    await new Promise(r => server.close(r));
+  }
 });
 
 test('stari materijal bez shareToken-a: link se pravi kad se uključi dijeljenje', async () => {
