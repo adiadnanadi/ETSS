@@ -709,7 +709,12 @@
     document.getElementById('hero-name').textContent = userData?.displayName || u.email.split('@')[0];
     document.getElementById('user-razred').textContent = userData?.razred || 'Nepoznat razred';
     document.getElementById('user-smjer').textContent = userData?.smjer || 'Svi smjerovi';
-    
+
+    // Literatura se učitava NEZAVISNO od ostalih podataka: prije je loadMaterials()
+    // visio na kraju loadData(), pa je pad bilo kog Firestore upita (kvizovi,
+    // rezultati, korisnici) ostavljao tab Literatura potpuno prazan, bez poruke.
+    loadMaterials();
+
     await loadData();
     initEventListeners();
   });
@@ -789,7 +794,8 @@
     renderQuizzes(quizzes, doneMap);
     renderResults();
     renderLeaderboard();
-    loadMaterials();
+    // loadMaterials() se više NE zove ovdje — učitava se nezavisno, direktno
+    // iz onAuthStateChanged (vidi gore), da pad ovih upita ne pogodi literaturu.
   }
 
   // ── LITERATURA ────────────────────────────────────────────────────
@@ -803,8 +809,12 @@
       if (!res.ok) throw new Error(data.error || 'Greška');
       materials = data.materials || [];
     } catch(e) {
+      // Ranije se ovo samo logovalo u konzolu, pa je učenik na tabu vidio
+      // "Nema materijala" — kao da literatura stvarno ne postoji.
       materials = [];
       console.warn('materials:', e.message);
+      renderMaterialsError(e.message);
+      return;
     }
     const sel = document.getElementById('mat-subject');
     const predmeti = [...new Set(materials.map(m => m.subject).filter(Boolean))].sort();
@@ -812,6 +822,28 @@
     predmeti.forEach(p => sel.appendChild(new Option(p, p)));
     renderMaterials();
   }
+
+  // Greška pri učitavanju literature mora biti VIDILJIVA na stranici, ne samo u
+  // konzoli. Uzrok je greška mreže/servera, pa se banner "bez razreda" sakriva
+  // da ne bi upućivao na pogrešan uzrok.
+  function renderMaterialsError(message) {
+    const msg = String(message || 'Nepoznata greška').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const noRz = document.getElementById('mat-no-razred');
+    if (noRz) noRz.style.display = 'none';
+    document.getElementById('materials-grid').innerHTML = `
+      <div class="empty-state-v2" style="grid-column: 1/-1">
+        <div class="empty-icon-v2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="empty-title">Literatura se nije učitala</div>
+        <div class="empty-desc">Greška: ${msg}</div>
+        <button class="btn-primary-v2" style="margin-top:18px" onclick="loadMaterials()">Pokušaj ponovo</button>
+      </div>`;
+  }
+
+  // Dugme "Pokušaj ponovo" koristi inline onclick, a modul nije u globalnom
+  // scope-u — zato loadMaterials mora biti izložena na window.
+  window.loadMaterials = loadMaterials;
 
   function matSize(b) {
     if (!b) return '—';
