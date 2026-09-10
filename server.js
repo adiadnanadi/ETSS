@@ -146,8 +146,21 @@ async function getUser(req) {
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) throw Object.assign(new Error('Niste prijavljeni'), { status: 401 });
   const decoded = await adminAuth.verifyIdToken(token);
-  const snap    = await adminDb.collection('users').doc(decoded.uid).get();
-  const data    = snap.exists ? snap.data() : {};
+  let data = {};
+  try {
+    const snap = await adminDb.collection('users').doc(decoded.uid).get();
+    data = snap.exists ? snap.data() : {};
+  } catch (e) {
+    // Firestore kvota (npr. besplatan Spark plan istrošen za dan) — gRPC poruka
+    // "8 RESOURCE_EXHAUSTED: Quota exceeded." nije čitljiva, pa je prevedemo.
+    if (/RESOURCE_EXHAUSTED|quota exceeded/i.test(e?.message || '')) {
+      throw Object.assign(new Error(
+        'Firebase baza (Firestore) je na kvoti — probaj za nekoliko minuta, ' +
+        'ili provjeri Usage u Firebase konzoli (Blaze plan uklanja ova ograničenja).'
+      ), { status: 503 });
+    }
+    throw e;
+  }
   return { uid: decoded.uid, email: decoded.email, role: data.role || 'student', razred: data.razred || '', displayName: data.displayName || decoded.email };
 }
 async function requireAdmin(req) {
