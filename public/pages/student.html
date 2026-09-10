@@ -659,6 +659,10 @@
         Literatura i materijali
       </h2>
     </div>
+    <div id="mat-no-razred" style="display:none;align-items:center;gap:10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.35);color:#FCA5A5;border-radius:12px;padding:12px 14px;font-size:13.5px;margin-bottom:16px">
+      <span style="font-size:18px">⚠️</span>
+      <span><b>Nemate postavljen razred</b> — zato ne vidite materijale namijenjene vašem razredu. Javite se nastavniku da vam upiše razred.</span>
+    </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
       <input id="mat-search" placeholder="Pretraži materijale..." oninput="renderMaterials()"
         style="flex:1;min-width:200px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:11px 14px;color:#fff;font-family:var(--jk);font-size:14px;outline:none"/>
@@ -837,6 +841,9 @@
     const search  = (document.getElementById('mat-search').value || '').toLowerCase();
     const subject = document.getElementById('mat-subject').value;
 
+    const noRz = document.getElementById('mat-no-razred');
+    if (noRz) noRz.style.display = userData?.razred ? 'none' : 'flex';
+
     const list = materials.filter(m => {
       if (subject && m.subject !== subject) return false;
       if (search && !(`${m.title} ${m.subject || ''} ${m.description || ''}`.toLowerCase().includes(search))) return false;
@@ -850,7 +857,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           </div>
           <div class="empty-title">Nema materijala</div>
-          <div class="empty-desc">Nastavnik još nije dodao literaturu za vaš razred.</div>
+          <div class="empty-desc">${userData?.razred ? 'Nastavnik još nije dodao literaturu za vaš razred.' : 'Nemate postavljen razred — javite se nastavniku da ga upiše.'}</div>
         </div>`;
       return;
     }

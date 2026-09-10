@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import {
   fileExt, isAllowedFile, mimeForExt, isInlineExt, sanitizeFileName,
   chunkBuffer, joinChunks, parseRange, canAccessMaterial, publicMaterial,
-  contentDisposition, CHUNK_BYTES, normalizeRazred, parseRazredi
+  contentDisposition, CHUNK_BYTES, normalizeRazred, parseRazredi, sameRazred
 } from '../lib/materials.js';
 
 test('fileExt / isAllowedFile', () => {
@@ -73,11 +73,24 @@ test('parseRange: normalni, granični i neispravni slučajevi', () => {
 test('normalizeRazred / parseRazredi izjednačavaju crticu, razmak i veličinu slova', () => {
   assert.equal(normalizeRazred(' iii-t5 '), 'III-T5');
   assert.equal(normalizeRazred('III–T5'), 'III-T5');   // en-dash
-  assert.equal(normalizeRazred('iii t5'), 'III T5');
+  assert.equal(normalizeRazred('iii t5'), 'III-T5');   // razmak = crtica
+  assert.equal(normalizeRazred('III  T5'), 'III-T5');  // dupla razmaknica
+  assert.equal(normalizeRazred('III - T5'), 'III-T5');
+  assert.equal(normalizeRazred(''), '');
+  assert.equal(normalizeRazred(null), '');
   assert.deepEqual(parseRazredi('["III-T5","IV-T5"]'), ['III-T5', 'IV-T5']);
   assert.deepEqual(parseRazredi('III-T5, IV-T5'), ['III-T5', 'IV-T5']);
   assert.deepEqual(parseRazredi('[]'), []);
   assert.deepEqual(parseRazredi(null), []);
+});
+
+test('sameRazred izjednačava razmak, crticu i veličinu slova', () => {
+  assert.ok(sameRazred('III-T5', 'iii t5'));
+  assert.ok(sameRazred('III T5', 'III-T5'));
+  assert.ok(sameRazred('III–T5', 'III-T5'));
+  assert.ok(!sameRazred('III-T5', 'III-T6'));
+  assert.ok(!sameRazred('', 'III-T5'));
+  assert.ok(!sameRazred(null, null));
 });
 
 test('canAccessMaterial: razredi, vidljivost, admin', () => {
@@ -96,6 +109,8 @@ test('canAccessMaterial: razredi, vidljivost, admin', () => {
   // strogo označen razred, ali drugačiji zapis — učenik I DALJE vidi
   assert.ok(canAccessMaterial({ razredi: [' iii–t5 '] }, { role: 'student', razred: 'III-T5' }));
   assert.ok(canAccessMaterial({ razredi: '["III-T5"]' }, { role: 'student', razred: 'III-T5' }));
+  assert.ok(canAccessMaterial({ razredi: ['III-T5'] }, { role: 'student', razred: 'III T5' }));
+  assert.ok(canAccessMaterial({ razredi: ['III T5'] }, { role: 'student', razred: 'iii-t5' }));
   assert.ok(!canAccessMaterial({ razredi: ['III-T5'] }, { role: 'student', razred: 'IV-T5' }));
   assert.ok(!canAccessMaterial({ razredi: ['III-T5'] }, { role: 'student', razred: '' }));
 });
