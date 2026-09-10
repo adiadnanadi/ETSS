@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 dotenv.config();
 
@@ -17,14 +18,17 @@ const upload    = multer({ storage: multer.memoryStorage(), limits: { fileSize: 
 const mistral   = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 
 // ── Firebase Admin init ──────────────────────────────────────────────────────
-let adminAuth = null;
-let adminDb   = null;
+let adminAuth    = null;
+let adminDb      = null;
+let adminBucket  = null;
+const BUCKET_NAME = process.env.FIREBASE_STORAGE_BUCKET || 'kviz-13f52.firebasestorage.app';
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
   if (serviceAccount.project_id) {
-    initializeApp({ credential: cert(serviceAccount) });
+    initializeApp({ credential: cert(serviceAccount), storageBucket: BUCKET_NAME });
     adminAuth = getAuth();
     adminDb   = getFirestore();
+    try { adminBucket = getStorage().bucket(); } catch(e) { console.warn('⚠️  Storage bucket greška:', e.message); }
     console.log('✅ Firebase Admin inicijalizovan');
   } else {
     console.warn('⚠️  FIREBASE_SERVICE_ACCOUNT nije postavljen');
@@ -49,6 +53,7 @@ app.get('/student',     (req, res) => res.sendFile(path.join(__dirname, 'public/
 app.get('/create-quiz', (req, res) => res.sendFile(path.join(__dirname, 'public/pages/create-quiz.html')));
 app.get('/take-quiz',   (req, res) => res.sendFile(path.join(__dirname, 'public/pages/take-quiz.html')));
 app.get('/result',      (req, res) => res.sendFile(path.join(__dirname, 'public/pages/result.html')));
+app.get('/materijali',  (req, res) => res.redirect('/student'));
 
 // ── API: HEALTH ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -108,6 +113,172 @@ app.put('/api/admin/user/:uid', async (req, res) => {
     console.error('❌ update-user greška:', e);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// LITERATURA / MATERIJALI (PDF, Word, ...)
+// ════════════════════════════════════════════════════════════════════════════
+
+const MATERIAL_MIME = {
+  'pdf':  'application/pdf',
+  'doc':  'application/msword',
+  'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'ppt':  'application/vnd.ms-powerpoint',
+  'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'txt':  'text/plain'
+};
+
+// ── Auth helper: čita Bearer ID token ────────────────────────────────────────
+async function getUser(req) {
+  if (!adminAuth || !adminDb) throw Object.assign(new Error('Firebase Admin nije konfigurisan'), { status: 503 });
+  const header = req.headers.authorization || '';
+  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) throw Object.assign(new Error('Niste prijavljeni'), { status: 401 });
+  const decoded = await adminAuth.verifyIdToken(token);
+  const snap    = await adminDb.collection('users').doc(decoded.uid).get();
+  const data    = snap.exists ? snap.data() : {};
+  return { uid: decoded.uid, email: decoded.email, role: data.role || 'student', razred: data.razred || '', displayName: data.displayName || decoded.email };
+}
+async function requireAdmin(req) {
+  const u = await getUser(req);
+  if (u.role !== 'admin') throw Object.assign(new Error('Nemate dozvolu'), { status: 403 });
+  return u;
+}
+function apiErr(res, e, where) {
+  console.error(`❌ ${where}:`, e.message);
+  res.status(e.status || 500).json({ error: e.message || 'Greška' });
+}
+
+// ── LIST: profesor vidi sve, učenik samo za svoj razred ──────────────────────
+app.get('/api/materials', async (req, res) => {
+  try {
+    const user = await getUser(req);
+    const snap = await adminDb.collection('materials').get();
+    let items  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (user.role !== 'admin') {
+      items = items.filter(m =>
+        m.visible !== false &&
+        (!Array.isArray(m.razredi) || m.razredi.length === 0 || m.razredi.includes(user.razred))
+      );
+    }
+    items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    res.json({ success: true, materials: items });
+  } catch(e) { apiErr(res, e, 'materials list'); }
+});
+
+// ── UPLOAD (samo admin/profesor) ─────────────────────────────────────────────
+app.post('/api/materials', upload.single('file'), async (req, res) => {
+  try {
+    const user = await requireAdmin(req);
+    if (!adminBucket) throw Object.assign(new Error('Firebase Storage nije konfigurisan'), { status: 503 });
+    if (!req.file) throw Object.assign(new Error('Fajl je obavezan'), { status: 400 });
+
+    const origName = req.file.originalname || 'dokument';
+    const ext      = (origName.split('.').pop() || '').toLowerCase();
+    if (!MATERIAL_MIME[ext])
+      throw Object.assign(new Error('Dozvoljeni formati: PDF, DOC, DOCX, PPT, PPTX, TXT'), { status: 400 });
+
+    const { title = '', description = '', subject = '', razredi = '[]' } = req.body;
+    let razrediArr = [];
+    try { razrediArr = JSON.parse(razredi); } catch { razrediArr = razredi ? [razredi] : []; }
+    if (!Array.isArray(razrediArr)) razrediArr = [];
+
+    const id       = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const safeName = origName.replace(/[^\w.\-() ]+/g, '_');
+    const filePath = `materials/${id}/${safeName}`;
+
+    await adminBucket.file(filePath).save(req.file.buffer, {
+      resumable: false,
+      metadata: { contentType: MATERIAL_MIME[ext] }
+    });
+
+    const docData = {
+      title:       String(title).trim() || origName,
+      description: String(description).trim(),
+      subject:     String(subject).trim(),
+      razredi:     razrediArr.map(r => String(r).trim()).filter(Boolean),
+      fileName:    origName,
+      ext,
+      mimeType:    MATERIAL_MIME[ext],
+      size:        req.file.size,
+      storagePath: filePath,
+      uploadedBy:  user.uid,
+      uploadedByName: user.displayName,
+      visible:     true,
+      downloads:   0,
+      createdAt:   new Date().toISOString()
+    };
+    await adminDb.collection('materials').doc(id).set(docData);
+    res.json({ success: true, material: { id, ...docData } });
+  } catch(e) { apiErr(res, e, 'materials upload'); }
+});
+
+// ── UPDATE meta (samo admin) ─────────────────────────────────────────────────
+app.put('/api/materials/:id', async (req, res) => {
+  try {
+    await requireAdmin(req);
+    const { title, description, subject, razredi, visible } = req.body;
+    const upd = { updatedAt: new Date().toISOString() };
+    if (title !== undefined)       upd.title       = String(title).trim();
+    if (description !== undefined) upd.description = String(description).trim();
+    if (subject !== undefined)     upd.subject     = String(subject).trim();
+    if (visible !== undefined)     upd.visible     = !!visible;
+    if (razredi !== undefined)     upd.razredi     = (Array.isArray(razredi) ? razredi : []).map(r => String(r).trim()).filter(Boolean);
+    await adminDb.collection('materials').doc(req.params.id).update(upd);
+    res.json({ success: true, updated: upd });
+  } catch(e) { apiErr(res, e, 'materials update'); }
+});
+
+// ── DELETE (samo admin) ──────────────────────────────────────────────────────
+app.delete('/api/materials/:id', async (req, res) => {
+  try {
+    await requireAdmin(req);
+    const ref  = adminDb.collection('materials').doc(req.params.id);
+    const snap = await ref.get();
+    if (!snap.exists) throw Object.assign(new Error('Materijal ne postoji'), { status: 404 });
+    const data = snap.data();
+    if (adminBucket && data.storagePath) {
+      try { await adminBucket.file(data.storagePath).delete(); }
+      catch(e) { console.warn('⚠️  Brisanje fajla:', e.message); }
+    }
+    await ref.delete();
+    res.json({ success: true });
+  } catch(e) { apiErr(res, e, 'materials delete'); }
+});
+
+// ── FILE STREAM (pregled u browseru / download) ──────────────────────────────
+app.get('/api/materials/:id/file', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (token) req.headers.authorization = 'Bearer ' + token;
+    const user = await getUser(req);
+
+    const snap = await adminDb.collection('materials').doc(req.params.id).get();
+    if (!snap.exists) throw Object.assign(new Error('Materijal ne postoji'), { status: 404 });
+    const m = snap.data();
+
+    if (user.role !== 'admin') {
+      const allowed = m.visible !== false &&
+        (!Array.isArray(m.razredi) || m.razredi.length === 0 || m.razredi.includes(user.razred));
+      if (!allowed) throw Object.assign(new Error('Nemate pristup ovom materijalu'), { status: 403 });
+    }
+
+    const file = adminBucket.file(m.storagePath);
+    const dl   = req.query.download === '1';
+    res.setHeader('Content-Type', m.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition',
+      `${dl ? 'attachment' : 'inline'}; filename="${encodeURIComponent(m.fileName || 'dokument')}"`);
+    if (m.size) res.setHeader('Content-Length', m.size);
+
+    if (dl) {
+      adminDb.collection('materials').doc(req.params.id)
+        .update({ downloads: (m.downloads || 0) + 1 }).catch(()=>{});
+    }
+    file.createReadStream()
+      .on('error', err => { console.error('❌ stream:', err.message); if(!res.headersSent) res.status(500).end(); })
+      .pipe(res);
+  } catch(e) { apiErr(res, e, 'materials file'); }
 });
 
 // ════════════════════════════════════════════════════════════════════════════

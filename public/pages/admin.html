@@ -457,6 +457,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Učenici
     </button>
+    <button class="mobile-nav-item" data-page="materials" onclick="switchPage(this); closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Literatura
+    </button>
   </div>
 </nav>
 
@@ -502,6 +506,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Učenici
     <span class="sb-badge" id="sb-stu-count">—</span>
+  </button>
+  <button class="sb-item" data-page="materials" onclick="switchPage(this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    Literatura
+    <span class="sb-badge" id="sb-mat-count">—</span>
   </button>
   <div style="flex:1"></div>
   <span class="sb-section">Akcije</span>
@@ -693,7 +702,71 @@
     </div>
   </div>
 
+  <!-- PAGE: MATERIALS (LITERATURA) -->
+  <div class="page" id="page-materials">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Literatura</div>
+        <div class="ph-sub">Materijali (PDF, Word, PPT) koje učenici mogu čitati i preuzeti</div>
+      </div>
+      <button class="btn2 btn2-primary" onclick="openMaterialModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Dodaj materijal
+      </button>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <div class="search-wrap" style="max-width:320px">
+          <span class="search-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input class="search-input" id="m-search" placeholder="Naziv, predmet ili fajl..." oninput="filterMaterials()"/>
+        </div>
+        <select class="filter-select" id="m-predmet" onchange="filterMaterials()"><option value="">Svi predmeti</option></select>
+        <select class="filter-select" id="m-razred" onchange="filterMaterials()"><option value="">Svi razredi</option></select>
+        <span class="filter-count" id="m-count"></span>
+      </div>
+      <div class="tbl-wrap" id="materials-wrap"></div>
+    </div>
+  </div>
+
 </main>
+
+<!-- MATERIAL MODAL -->
+<div class="modal-bg" id="material-modal" style="display:none">
+  <div class="modal2-lg">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+      <div class="modal2-title" id="mm-title" style="margin:0">Dodaj materijal</div>
+      <button class="btn2 btn2-ghost btn2-sm" onclick="closeMaterialModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Zatvori
+      </button>
+    </div>
+    <div class="row2" style="margin-bottom:16px">
+      <div class="fg2"><label>Naziv materijala</label><input class="inp2" id="mm-name" placeholder="npr. Skripta — Baze podataka"/></div>
+      <div class="fg2"><label>Predmet</label><input class="inp2" id="mm-subject" list="mm-subject-list" placeholder="npr. Informatika"/><datalist id="mm-subject-list"></datalist></div>
+    </div>
+    <div class="fg2" style="margin-bottom:16px">
+      <label>Opis (opcionalno)</label><textarea class="ta2" id="mm-desc" placeholder="Kratak opis šta materijal pokriva"></textarea>
+    </div>
+    <div class="fg2" style="margin-bottom:16px">
+      <label>Razredi koji vide materijal</label>
+      <div id="mm-razredi" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+      <div style="font-size:11.5px;color:#64748B;margin-top:6px">Ako ne odabereš nijedan razred, materijal vide svi učenici.</div>
+    </div>
+    <div class="fg2" id="mm-file-fld" style="margin-bottom:8px">
+      <label>Fajl — PDF, DOC, DOCX, PPT, PPTX, TXT (max 20MB)</label>
+      <input class="inp2" type="file" id="mm-file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"/>
+    </div>
+    <div class="modal2-foot">
+      <button class="btn2 btn2-ghost" onclick="closeMaterialModal()">Odustani</button>
+      <button class="btn2 btn2-primary" id="mm-save" onclick="saveMaterial()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Sačuvaj
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- STUDENT DETAIL PANEL -->
 <aside class="student-detail" id="student-detail">
@@ -891,6 +964,7 @@ async function loadAll() {
     renderQuizzes();
     filterResults();
     filterStudents();
+    loadMaterials();
   } catch(e) { toast('Greška: '+e.message,'error'); }
 }
 
@@ -1565,6 +1639,200 @@ window.confirmAction = (title,body,onConfirm) => {
   document.getElementById('modal').style.display='flex';
 };
 window.closeModal = () => document.getElementById('modal').style.display='none';
+
+// ════════════════════════════════════════════════════════════════════
+// LITERATURA / MATERIJALI
+// ════════════════════════════════════════════════════════════════════
+let materials = [], editingMaterialId = null;
+
+async function authHeaders() {
+  const t = await auth.currentUser.getIdToken();
+  return { Authorization: 'Bearer ' + t };
+}
+
+async function loadMaterials() {
+  try {
+    const res  = await fetch('/api/materials', { headers: await authHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Greška');
+    materials = data.materials || [];
+  } catch(e) {
+    materials = [];
+    console.warn('materials:', e.message);
+  }
+  const cnt = document.getElementById('sb-mat-count');
+  if (cnt) cnt.textContent = materials.length;
+  populateMaterialFilters();
+  filterMaterials();
+}
+
+function populateMaterialFilters() {
+  const predmeti = [...new Set(materials.map(m=>m.subject).filter(Boolean))].sort();
+  const pd = document.getElementById('m-predmet');
+  if (pd) { while(pd.options.length>1) pd.remove(1); predmeti.forEach(p=>pd.appendChild(new Option(p,p))); }
+
+  const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
+  const razredi   = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
+  const rz = document.getElementById('m-razred');
+  if (rz) { while(rz.options.length>1) rz.remove(1); razredi.forEach(r=>rz.appendChild(new Option(r,r))); }
+
+  const dl = document.getElementById('mm-subject-list');
+  if (dl) {
+    const svi = [...new Set([...predmeti, ...quizzes.map(q=>q.subject).filter(Boolean)])].sort();
+    dl.innerHTML = svi.map(p=>`<option value="${p}"></option>`).join('');
+  }
+}
+
+function fileIcon(ext) {
+  const map = { pdf:'#F87171', doc:'#60A5FA', docx:'#60A5FA', ppt:'#FB923C', pptx:'#FB923C', txt:'#94A3B8' };
+  const c = map[ext] || '#94A3B8';
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:${c}22;color:${c};font-size:10px;font-weight:800;letter-spacing:.02em">${(ext||'?').toUpperCase()}</span>`;
+}
+function fmtSize(b) {
+  if (!b) return '—';
+  return b >= 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(b/1024))+' KB';
+}
+
+window.filterMaterials = () => {
+  const search  = (document.getElementById('m-search')?.value || '').toLowerCase();
+  const predmet = document.getElementById('m-predmet')?.value || '';
+  const razred  = document.getElementById('m-razred')?.value || '';
+
+  const filtered = materials.filter(m => {
+    if (search && !(`${m.title} ${m.subject} ${m.fileName} ${m.description}`.toLowerCase().includes(search))) return false;
+    if (predmet && m.subject !== predmet) return false;
+    if (razred && !(Array.isArray(m.razredi) && (m.razredi.length===0 || m.razredi.includes(razred)))) return false;
+    return true;
+  });
+
+  document.getElementById('m-count').textContent = `${filtered.length} materijala`;
+  const wrap = document.getElementById('materials-wrap');
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon2">📚</div><div>Još nema dodane literature</div></div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="tbl2">
+    <thead><tr><th>Materijal</th><th>Predmet</th><th>Razredi</th><th>Veličina</th><th>Dodano</th><th>Vidljivo</th><th style="text-align:right">Akcije</th></tr></thead>
+    <tbody>${filtered.map(m=>`
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${fileIcon(m.ext)}
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:13.5px">${m.title}</div>
+              <div style="font-size:11.5px;color:#64748B">${m.fileName} · ${m.downloads||0} preuzimanja</div>
+            </div>
+          </div>
+        </td>
+        <td>${m.subject ? `<span class="badge2 blue">${m.subject}</span>` : '—'}</td>
+        <td style="font-size:12px;color:#94A3B8">${(m.razredi&&m.razredi.length) ? m.razredi.join(', ') : 'Svi'}</td>
+        <td style="font-size:12.5px">${fmtSize(m.size)}</td>
+        <td style="font-size:12.5px">${fmtDate(m.createdAt)}</td>
+        <td>${m.visible===false ? '<span class="badge2 red">Skriveno</span>' : '<span class="badge2 green">Da</span>'}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <button class="btn2 btn2-ghost btn2-sm" onclick="openMaterial('${m.id}')" title="Otvori">Otvori</button>
+          <button class="btn2 btn2-ghost btn2-sm" onclick="toggleMaterial('${m.id}')" title="Vidljivost">${m.visible===false?'Prikaži':'Sakrij'}</button>
+          <button class="btn2 btn2-primary btn2-sm" onclick="openMaterialModal('${m.id}')">Uredi</button>
+          <button class="btn2 btn2-danger btn2-sm" onclick="deleteMaterial('${m.id}')">Obriši</button>
+        </td>
+      </tr>`).join('')}
+    </tbody></table>`;
+};
+
+window.openMaterial = async (id) => {
+  const t = await auth.currentUser.getIdToken();
+  window.open(`/api/materials/${id}/file?token=${encodeURIComponent(t)}`, '_blank');
+};
+
+window.openMaterialModal = (id = null) => {
+  editingMaterialId = id;
+  populateMaterialFilters();
+  const m = id ? materials.find(x=>x.id===id) : null;
+  document.getElementById('mm-title').textContent = m ? 'Uredi materijal' : 'Dodaj materijal';
+  document.getElementById('mm-name').value    = m?.title || '';
+  document.getElementById('mm-subject').value = m?.subject || '';
+  document.getElementById('mm-desc').value    = m?.description || '';
+  document.getElementById('mm-file-fld').style.display = m ? 'none' : 'flex';
+  const fileEl = document.getElementById('mm-file'); if (fileEl) fileEl.value = '';
+
+  const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
+  const razredi   = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
+  const sel = new Set(m?.razredi || []);
+  document.getElementById('mm-razredi').innerHTML = razredi.map(r=>`
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);font-size:12.5px;cursor:pointer">
+      <input type="checkbox" class="mm-rz" value="${r}" ${sel.has(r)?'checked':''}/> ${r}
+    </label>`).join('');
+
+  document.getElementById('material-modal').style.display = 'flex';
+};
+window.closeMaterialModal = () => { document.getElementById('material-modal').style.display='none'; editingMaterialId=null; };
+
+window.saveMaterial = async () => {
+  const btn   = document.getElementById('mm-save');
+  const title = document.getElementById('mm-name').value.trim();
+  const subject = document.getElementById('mm-subject').value.trim();
+  const description = document.getElementById('mm-desc').value.trim();
+  const razredi = [...document.querySelectorAll('.mm-rz:checked')].map(c=>c.value);
+  const file = document.getElementById('mm-file')?.files?.[0];
+
+  if (!editingMaterialId && !file) { toast('Odaberite fajl','error'); return; }
+  if (!title && !file) { toast('Unesite naziv','error'); return; }
+
+  btnLoad(btn, editingMaterialId ? 'Čuvam...' : 'Upload u toku...');
+  try {
+    if (editingMaterialId) {
+      const res = await fetch('/api/materials/'+editingMaterialId, {
+        method: 'PUT',
+        headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
+        body: JSON.stringify({ title, subject, description, razredi })
+      });
+      const d = await res.json(); if (!res.ok) throw new Error(d.error);
+      toast('Materijal ažuriran','success');
+    } else {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('title', title || file.name);
+      fd.append('subject', subject);
+      fd.append('description', description);
+      fd.append('razredi', JSON.stringify(razredi));
+      const res = await fetch('/api/materials', { method:'POST', headers: await authHeaders(), body: fd });
+      const d = await res.json(); if (!res.ok) throw new Error(d.error);
+      toast('Materijal dodan','success');
+    }
+    closeMaterialModal();
+    await loadMaterials();
+  } catch(e) { toast('Greška: '+e.message,'error'); }
+  btnReset(btn);
+};
+
+window.toggleMaterial = async (id) => {
+  const m = materials.find(x=>x.id===id); if (!m) return;
+  try {
+    const res = await fetch('/api/materials/'+id, {
+      method:'PUT',
+      headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ visible: m.visible === false })
+    });
+    const d = await res.json(); if (!res.ok) throw new Error(d.error);
+    await loadMaterials();
+  } catch(e) { toast('Greška: '+e.message,'error'); }
+};
+
+window.deleteMaterial = (id) => {
+  const m = materials.find(x=>x.id===id); if (!m) return;
+  confirmAction('Obriši materijal', `Sigurno obrisati <b>${m.title}</b>? Fajl se trajno briše.`, async () => {
+    try {
+      const res = await fetch('/api/materials/'+id, { method:'DELETE', headers: await authHeaders() });
+      const d = await res.json(); if (!res.ok) throw new Error(d.error);
+      toast('Materijal obrisan','success');
+      await loadMaterials();
+    } catch(e) { toast('Greška: '+e.message,'error'); }
+  });
+};
+
+document.getElementById('material-modal').onclick = (e) => {
+  if (e.target === document.getElementById('material-modal')) closeMaterialModal();
+};
 </script>
 </body>
 </html>
