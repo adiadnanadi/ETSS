@@ -299,10 +299,129 @@ test('admin.html: modal ima brojač vidljivosti, učenici bez razreda su označe
   assert.match(adminHtml, /bez razreda/, 'učenik bez razreda mora biti vidljivo označen');
 });
 
+const studentHtml = read('public/pages/student.html');
+const studentCode = inlineScripts(studentHtml).join('\n');
+
 test('student.html: upozorenje kad učenik nema razred', () => {
-  const studentHtml = read('public/pages/student.html');
   assert.match(studentHtml, /id="mat-no-razred"/, 'mora postojati #mat-no-razred upozorenje');
   assert.match(studentHtml, /Nemate postavljen razred/, 'poruka mora objašnjavati uzrok');
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// 3b) student.html: literatura se učitava NEZAVISNO od ostatka stranice, a
+//     greška pri učitavanju mora biti VIDILJIVA (ne samo u konzoli).
+//     Ranije: loadMaterials() je visio na kraju loadData(), pa je pad bilo
+//     kog Firestore upita ostavljao tab Literatura prazan bez poruke; pad
+//     /api/materials bi pokazao "Nema materijala" — kao da ga stvarno nema.
+// ════════════════════════════════════════════════════════════════════════════
+test('student.html: loadMaterials() ne visi na kraju loadData()', () => {
+  // stripLiterals skida komentare — gleda se samo stvarni kod
+  const loadDataSource = stripLiterals(extractFunctionSource(studentCode, 'loadData'));
+  assert.doesNotMatch(loadDataSource, /(?<![.\w$])loadMaterials\s*\(/,
+    'pad bilo kog Firestore upita u loadData() ne smije ostaviti literaturu praznom');
+
+  const authIdx  = studentCode.indexOf('onAuthStateChanged');
+  const loadIdx  = studentCode.indexOf('await loadData()');
+  assert.ok(authIdx > -1 && loadIdx > -1, 'onAuthStateChanged i loadData() moraju postojati');
+  const handler = stripLiterals(studentCode.slice(authIdx, loadIdx));
+  assert.match(handler, /(?<![.\w$])loadMaterials\s*\(\)/,
+    'loadMaterials() se mora zvati direktno iz onAuthStateChanged, nezavisno od loadData()');
+});
+
+test('student.html: loadMaterials je izložena na window (inline onclick "Pokušaj ponovo")', () => {
+  assert.match(studentCode, /window\.loadMaterials\s*=\s*loadMaterials\b/,
+    'modul nije u globalnom scope-u — bez window.loadMaterials retry dugme ne radi');
+});
+
+/** Izvršava STVARNI izvor loadMaterials() iz student.html uz stub-ove. */
+function studentMaterialsHarness({ fetchImpl }) {
+  const calls = { renders: 0, errors: [] };
+  const src = extractFunctionSource(studentCode, 'loadMaterials');
+  const script = new vm.Script(
+    `(function () {\nlet materials = ['stale'];\n${src}\n` +
+    `return { loadMaterials, get materials() { return materials; } };\n})()`
+  );
+  // <select id="mat-subject"> — dovoljno options/remove/appendChild za kod iz stranice
+  const sel = {
+    options: [{ value: '', text: 'Svi predmeti' }],
+    remove(i) { this.options.splice(i, 1); },
+    appendChild(o) { this.options.push(o); }
+  };
+  const ctx = vm.createContext({
+    fetch: fetchImpl,
+    auth: { currentUser: { getIdToken: async () => 'test-token' } },
+    renderMaterials: () => { calls.renders++; },
+    renderMaterialsError: (msg) => { calls.errors.push(String(msg)); },
+    Option: function (value, text) { this.value = value; this.text = text; },
+    document: { getElementById: (id) => id === 'mat-subject' ? sel : null },
+    console: { warn: () => {} },
+    Error
+  });
+  return { api: script.runInContext(ctx), calls, sel };
+}
+
+test('student.html: loadMaterials() puni listu, filter predmeta i renderuje', async () => {
+  const seen = {};
+  const { api, calls, sel } = studentMaterialsHarness({
+    fetchImpl: async (url, opts) => {
+      seen.url = url; seen.opts = opts;
+      return { ok: true, json: async () => ({ materials: [
+        { id: 'm1', title: 'Skripta iz matematike', subject: 'Matematika' },
+        { id: 'm2', title: 'Pripremnice',           subject: 'Fizika' },
+        { id: 'm3', title: 'Bez predmeta',          subject: '' }
+      ] }) };
+    }
+  });
+
+  await api.loadMaterials();
+
+  assert.equal(seen.url, '/api/materials');
+  // objekat je nastao u vm kontekstu → poredi se polje, ne prototip (deepStrictEqual)
+  assert.equal(seen.opts.headers.Authorization, 'Bearer test-token');
+  assert.deepEqual(Array.from(api.materials).map(m => m.id), ['m1', 'm2', 'm3']);
+  assert.deepEqual(sel.options.map(o => o.value), ['', 'Fizika', 'Matematika'],
+    'filter predmeta se puni, sortiran, bez praznih');
+  assert.equal(calls.renders, 1, 'renderMaterials() mora biti pozvan');
+  assert.deepEqual(calls.errors, []);
+});
+
+test('student.html: pad /api/materials prikazuje grešku, ne "Nema materijala"', async () => {
+  const { api, calls } = studentMaterialsHarness({
+    fetchImpl: async () => ({ ok: false, json: async () => ({ error: 'Baza nije konfigurisana' }) })
+  });
+
+  await api.loadMaterials();   // ne smije baciti
+
+  assert.equal(api.materials.length, 0, 'lista mora biti prazna, ne zastarjela');
+  assert.deepEqual(calls.errors, ['Baza nije konfigurisana'],
+    'renderMaterialsError() mora biti pozvan sa porukom servera');
+  assert.equal(calls.renders, 0, '"Nema materijala" se ne smije iscrtati preko greške');
+});
+
+test('student.html: renderMaterialsError() ispisan je na stranici, escaped, s retry', () => {
+  const src = extractFunctionSource(studentCode, 'renderMaterialsError');
+  const script = new vm.Script(`(function () {\n${src}\nreturn { renderMaterialsError };\n})()`);
+  const els = {};
+  const el  = id => (els[id] ??= { innerHTML: '', style: {} });
+  const api = script.runInContext(vm.createContext({
+    document: { getElementById: el },
+    String, Error
+  }));
+
+  api.renderMaterialsError('Baza nije konfigurisana');
+
+  const html = els['materials-grid'].innerHTML;
+  assert.match(html, /Literatura se nije učitala/, 'naslov greške mora biti vidljiv');
+  assert.match(html, /Greška: Baza nije konfigurisana/, 'poruka servera mora biti vidljiva');
+  assert.match(html, /Pokušaj ponovo/, 'mora postojati retry dugme');
+  assert.match(html, /onclick="loadMaterials\(\)"/, 'retry ponovo zove loadMaterials()');
+  assert.equal(els['mat-no-razred'].style.display, 'none',
+    'banner "bez razreda" se skriva — uzrok je greška, ne razred');
+
+  // poruka ide u innerHTML → mora biti escaped (server je vrati, ne smije postati HTML)
+  api.renderMaterialsError('<img src=x onerror=alert(1)>');
+  assert.doesNotMatch(els['materials-grid'].innerHTML, /<img src=x/, 'poruka mora biti escaped');
+  assert.match(els['materials-grid'].innerHTML, /&lt;img src=x/);
 });
 
 // ════════════════════════════════════════════════════════════════════════════
