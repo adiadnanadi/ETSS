@@ -182,6 +182,23 @@ test('upload: učenik ne može dodavati materijale', async () => {
   } finally { await ctx.close(); }
 });
 
+test('lista: učenik vidi materijal označen za njegov razred i kad je zapis drugačiji', async () => {
+  const ctx = await boot({ seed: {
+    'materials/m1': { title: 'Za III-T5', razredi: [' iii–t5 '], visible: true, ext: 'pdf', shareToken: 'a'.repeat(24), createdAt: '2024-01-01' },
+    'materials/m2': { title: 'JSON string', razredi: '["III-1"]', visible: true, ext: 'pdf', shareToken: 'b'.repeat(24), createdAt: '2024-02-01' }
+  }});
+  try {
+    const iii1 = await ctx.json('/api/materials', 'iii1-token');
+    assert.deepEqual(iii1.body.materials.map(m => m.title), ['JSON string']);
+
+    const file = await ctx.get('/api/materials/m2/file', 'iii1-token');
+    assert.equal(file.status, 200);
+
+    const denied = await ctx.get('/api/materials/m1/file', 'iii1-token');
+    assert.equal(denied.status, 403);
+  } finally { await ctx.close(); }
+});
+
 test('lista: učenik vidi samo svoj razred i vidljivo, bez internih polja', async () => {
   const ctx = await boot({ seed: {
     'materials/m1': { title: 'Za III-1', razredi: ['III-1'], visible: true,  ext: 'pdf', driveFileId: 'D1', shareToken: 'a'.repeat(24), createdAt: '2024-01-01' },

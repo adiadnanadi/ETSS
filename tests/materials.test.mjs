@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import {
   fileExt, isAllowedFile, mimeForExt, isInlineExt, sanitizeFileName,
   chunkBuffer, joinChunks, parseRange, canAccessMaterial, publicMaterial,
-  contentDisposition, CHUNK_BYTES
+  contentDisposition, CHUNK_BYTES, normalizeRazred, parseRazredi
 } from '../lib/materials.js';
 
 test('fileExt / isAllowedFile', () => {
@@ -70,6 +70,16 @@ test('parseRange: normalni, granični i neispravni slučajevi', () => {
   assert.equal(parseRange('bytes=900-100', 1000), null);
 });
 
+test('normalizeRazred / parseRazredi izjednačavaju crticu, razmak i veličinu slova', () => {
+  assert.equal(normalizeRazred(' iii-t5 '), 'III-T5');
+  assert.equal(normalizeRazred('III–T5'), 'III-T5');   // en-dash
+  assert.equal(normalizeRazred('iii t5'), 'III T5');
+  assert.deepEqual(parseRazredi('["III-T5","IV-T5"]'), ['III-T5', 'IV-T5']);
+  assert.deepEqual(parseRazredi('III-T5, IV-T5'), ['III-T5', 'IV-T5']);
+  assert.deepEqual(parseRazredi('[]'), []);
+  assert.deepEqual(parseRazredi(null), []);
+});
+
 test('canAccessMaterial: razredi, vidljivost, admin', () => {
   const student = { role: 'student', razred: 'III-1' };
   const admin   = { role: 'admin',   razred: '' };
@@ -82,6 +92,12 @@ test('canAccessMaterial: razredi, vidljivost, admin', () => {
   assert.ok(canAccessMaterial({ razredi: ['IV-2'] }, admin));
   assert.ok(canAccessMaterial({ razredi: [] }, {}));   // "za sve razrede" vidi svaki prijavljeni
   assert.ok(!canAccessMaterial({}, null));
+
+  // strogo označen razred, ali drugačiji zapis — učenik I DALJE vidi
+  assert.ok(canAccessMaterial({ razredi: [' iii–t5 '] }, { role: 'student', razred: 'III-T5' }));
+  assert.ok(canAccessMaterial({ razredi: '["III-T5"]' }, { role: 'student', razred: 'III-T5' }));
+  assert.ok(!canAccessMaterial({ razredi: ['III-T5'] }, { role: 'student', razred: 'IV-T5' }));
+  assert.ok(!canAccessMaterial({ razredi: ['III-T5'] }, { role: 'student', razred: '' }));
 });
 
 test('publicMaterial ne curi internu putanju ni Drive ID učenicima', () => {
