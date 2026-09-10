@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Materijal — Kvizmajstor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"/>
+<style>
+  body { background: #0d1626; }
+  .mv-bar {
+    display:flex; align-items:center; gap:14px; padding:12px 18px;
+    background: rgba(255,255,255,.03); border-bottom:1px solid rgba(255,255,255,.08);
+    position:sticky; top:0; z-index:10; backdrop-filter: blur(12px);
+  }
+  .mv-back {
+    display:inline-flex; align-items:center; gap:6px; font-size:13px; color:#94A3B8;
+    text-decoration:none; padding:7px 11px; border-radius:9px; border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04); transition:all .18s;
+  }
+  .mv-back:hover { color:#E2E8F0; border-color:rgba(255,255,255,.2); }
+  .mv-title { font-weight:700; font-size:15px; color:#E2E8F0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mv-sub { font-size:12px; color:#64748B; }
+  .mv-actions { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .mv-btn {
+    display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600;
+    padding:9px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05); color:#CBD5E1; cursor:pointer; text-decoration:none;
+  }
+  .mv-btn:hover { border-color:rgba(255,255,255,.24); color:#F1F5F9; }
+  .mv-btn-primary { background:#2563EB; border-color:#2563EB; color:#fff; }
+  .mv-btn-primary:hover { background:#1D4ED8; color:#fff; }
+  .mv-body { min-height: calc(100vh - 62px); }
+  .mv-frame { width:100%; height: calc(100vh - 62px); border:0; display:block; background:#1a2744; }
+  .mv-center { display:flex; align-items:center; justify-content:center; padding:60px 20px; }
+  .mv-card {
+    max-width:520px; width:100%; text-align:center; padding:36px 30px; border-radius:20px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+  }
+  .mv-icon {
+    width:74px; height:74px; border-radius:20px; margin:0 auto 18px;
+    display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; letter-spacing:.03em;
+  }
+  .mv-h1 { font-size:19px; font-weight:700; color:#E2E8F0; margin-bottom:6px; }
+  .mv-p { font-size:13.5px; color:#94A3B8; line-height:1.7; }
+  .mv-meta { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:18px 0 22px; font-size:12.5px; color:#64748B; }
+  .mv-cta { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .mv-msg { font-size:14px; color:#F87171; }
+  .mv-foot { margin-top:18px; font-size:11.5px; color:#475569; }
+</style>
+</head>
+<body>
+
+<div class="mv-bar">
+  <a class="mv-back" href="javascript:history.length>1?history.back():window.close()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Nazad
+  </a>
+  <div style="min-width:0">
+    <div class="mv-title" id="mv-title">Materijal</div>
+    <div class="mv-sub" id="mv-sub">Učitavanje…</div>
+  </div>
+  <div class="mv-actions" id="mv-actions"></div>
+</div>
+
+<div class="mv-body" id="mv-body">
+  <div class="mv-center"><div class="mv-p">Učitavanje materijala…</div></div>
+</div>
+
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const shareToken = params.get('m');
+  const materialId = params.get('id');
+  const idToken    = params.get('t');
+
+  const COLORS = { pdf:'#F87171', doc:'#60A5FA', docx:'#60A5FA', ppt:'#FB923C', pptx:'#FB923C', txt:'#94A3B8' };
+  const body   = document.getElementById('mv-body');
+  const esc    = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function fmtSize(b) {
+    if (!b) return '—';
+    return b >= 1048576 ? (b/1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b/1024)) + ' KB';
+  }
+  function fmtDate(d) {
+    if (!d) return '';
+    try { return new Date(d).toLocaleDateString('bs-BA', { day:'2-digit', month:'2-digit', year:'numeric' }); }
+    catch { return ''; }
+  }
+
+  function fail(message) {
+    body.innerHTML = `<div class="mv-center"><div class="mv-card">
+      <div class="mv-icon" style="background:#F8717122;color:#F87171">!</div>
+      <div class="mv-h1">Materijal nije dostupan</div>
+      <div class="mv-p mv-msg">${esc(message)}</div>
+    </div></div>`;
+  }
+
+  async function meta() {
+    if (shareToken) {
+      const res  = await fetch(`/api/materials/public/${encodeURIComponent(shareToken)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Link nije važeći');
+      return data.material;
+    }
+    if (materialId) {
+      const url = `/api/materials/${encodeURIComponent(materialId)}/meta` + (idToken ? `?token=${encodeURIComponent(idToken)}` : '');
+      const res  = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Nemate pristup materijalu');
+      return data.material;
+    }
+    throw new Error('Nedostaje oznaka materijala u linku.');
+  }
+
+  function fileUrl(m, download) {
+    const params = new URLSearchParams();
+    params.set(download ? 'download' : 'inline', '1');
+    if (shareToken) return `/m/${encodeURIComponent(shareToken)}?${params}`;
+    if (idToken) params.set('token', idToken);
+    return `/api/materials/${encodeURIComponent(materialId)}/file?${params}`;
+  }
+
+  function render(m) {
+    document.title = `${m.title || 'Materijal'} — Kvizmajstor`;
+    document.getElementById('mv-title').textContent = m.title || m.fileName || 'Materijal';
+    document.getElementById('mv-sub').textContent   = [m.subject, m.ext ? m.ext.toUpperCase() : '', fmtSize(m.size)].filter(Boolean).join(' · ');
+
+    const color = COLORS[m.ext] || '#94A3B8';
+    const dl    = fileUrl(m, true);
+    const view  = fileUrl(m, false);
+
+    const driveBtn = m.drive
+      ? `<a class="mv-btn" href="${esc(m.drive.drive)}" target="_blank" rel="noopener">
+           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+           Google Drive
+         </a>` : '';
+
+    document.getElementById('mv-actions').innerHTML =
+      `<a class="mv-btn mv-btn-primary" href="${esc(dl)}" download>
+         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+         Preuzmi
+       </a>` + driveBtn;
+
+    if (m.inlineView) {
+      body.innerHTML = `<iframe class="mv-frame" src="${esc(view)}" title="${esc(m.title)}"></iframe>`;
+      return;
+    }
+
+    if (m.ext === 'txt') {
+      body.innerHTML = `<div class="mv-center"><div class="mv-p">Učitavanje…</div></div>`;
+      fetch(view).then(r => r.text()).then(txt => {
+        body.innerHTML = `<div style="max-width:860px;margin:0 auto;padding:26px">
+          <pre style="white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:13px;color:#CBD5E1;line-height:1.8">${esc(txt)}</pre>
+        </div>`;
+      }).catch(e => fail(e.message));
+      return;
+    }
+
+    body.innerHTML = `<div class="mv-center"><div class="mv-card">
+      <div class="mv-icon" style="background:${color}22;color:${color}">${esc((m.ext || '?').toUpperCase())}</div>
+      <div class="mv-h1">${esc(m.title)}</div>
+      <div class="mv-p">${esc(m.description || 'Ovaj format se preuzima ili otvara u Google Drive pregledu.')}</div>
+      <div class="mv-meta">
+        <span>${esc(fmtSize(m.size))}</span>
+        ${m.fileName ? `<span>${esc(m.fileName)}</span>` : ''}
+        ${m.createdAt ? `<span>${esc(fmtDate(m.createdAt))}</span>` : ''}
+      </div>
+      <div class="mv-cta">
+        <a class="mv-btn mv-btn-primary" href="${esc(dl)}" download>Preuzmi fajl</a>
+        ${m.drive ? `<a class="mv-btn" href="${esc(m.drive.preview || m.drive.drive)}" target="_blank" rel="noopener">Otvori pregled</a>` : ''}
+      </div>
+      <div class="mv-foot">Za čitanje u browseru bez preuzimanja, koristi PDF verziju materijala.</div>
+    </div></div>`;
+  }
+
+  meta().then(render).catch(e => fail(e.message));
+})();
+</script>
+</body>
+</html>

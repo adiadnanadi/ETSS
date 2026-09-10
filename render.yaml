@@ -9,3 +9,25 @@ services:
         sync: false
       - key: NODE_VERSION
         value: 20
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      # ── Literatura na Google Drive (vidi README, sekcija 4) ──
+      # Najlakše: poveži Drive iz admin panela (Literatura → "Poveži Google Drive")
+      # i onda ove varijable ne moraju postojati. Ako ih ipak postaviš, imaju prioritet.
+      # Varijanta A — tvoj lični Drive (npm run drive:auth)
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_REFRESH_TOKEN
+        sync: false
+      # Varijanta B — service account (JSON u jednom redu) + folder podijeljen s njim
+      - key: GOOGLE_SERVICE_ACCOUNT
+        sync: false
+      - key: GDRIVE_FOLDER_ID
+        sync: false
+      # Opcionalno
+      - key: GDRIVE_SHARE_ANYONE
+        value: "1"
+      - key: MATERIALS_MAX_MB
+        value: "20"

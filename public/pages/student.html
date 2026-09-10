@@ -814,15 +814,22 @@
     return b >= 1048576 ? (b/1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b/1024)) + ' KB';
   }
 
+  // Čitanje ide kroz našu viewer stranicu (PDF se odmah prikaže u browseru),
+  // a preuzimanje ide direktno na fajl. Učenik NE mora imati Google nalog.
   window.openMaterialFile = async (id, download) => {
     const token = await auth.currentUser.getIdToken();
-    const url = `/api/materials/${id}/file?token=${encodeURIComponent(token)}${download ? '&download=1' : ''}`;
+    const url = `/api/materials/${id}/file?token=${encodeURIComponent(token)}${download ? '&download=1' : '&inline=1'}`;
     if (download) {
       const a = document.createElement('a');
       a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
     } else {
-      window.open(url, '_blank');
+      window.open(`/viewer?id=${encodeURIComponent(id)}&t=${encodeURIComponent(token)}`, '_blank');
     }
+  };
+
+  window.openMaterialDrive = (id) => {
+    const m = materials.find(x => x.id === id);
+    if (m?.drive?.drive) window.open(m.drive.drive, '_blank');
   };
 
   window.renderMaterials = () => {
@@ -879,6 +886,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Preuzmi
             </button>
+            ${m.drive ? `<button class="btn-secondary-v2" onclick="openMaterialDrive('${m.id}')" title="Otvori u Google Drive pregledu">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Drive
+            </button>` : ''}
           </div>
         </div>`;
     }).join('');
