@@ -1957,7 +1957,10 @@ window.filterMaterials = () => {
   const filtered = materials.filter(m => {
     if (search && !(`${m.title} ${m.subject} ${m.fileName} ${m.description}`.toLowerCase().includes(search))) return false;
     if (predmet && m.subject !== predmet) return false;
-    if (razred && !(Array.isArray(m.razredi) && (m.razredi.length===0 || m.razredi.some(x => normRazred(x) === normRazred(razred))))) return false;
+    if (razred) {
+      const rList = Array.isArray(m.razredi) ? m.razredi : [];
+      if (!(rList.length===0 || rList.some(x => normRazred(x) === normRazred(razred)))) return false;
+    }
     return true;
   });
 
