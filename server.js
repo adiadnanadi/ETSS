@@ -4,6 +4,7 @@ import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import { Mistral } from '@mistralai/mistralai';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -53,16 +54,108 @@ try {
 
 app.use(express.json({ limit: '20mb' }));
 app.use((req, res, next) => {
-  if (req.path.endsWith('.css')) res.type('text/css');
-  else if (req.path.endsWith('.js')) res.type('application/javascript');
+  if (req.path.startsWith('/api/')) {
+    res.set('Cache-Control', 'no-store');
+  }
   next();
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) res.set('Cache-Control', 'no-cache');
+  }
+}));
 
-// ── PAGE ROUTES ──────────────────────────────────────────────────────────────
+// Auth helper
+async function getUser(req) {
+  const h = req.headers.authorization || '';
+  if (!h.startsWith('Bearer ') || !adminAuth) return null;
+  try {
+    return await adminAuth.verifyIdToken(h.slice(7));
+  } catch { return null; }
+}
+async function requireAdmin(req, res) {
+  const user = await getUser(req);
+  if (!user) { res.status(401).json({ error: 'Niste prijavljeni' }); return null; }
+  const snap = await adminDb.collection('users').doc(user.uid).get();
+  if (!snap.exists || snap.data()?.role !== 'admin') {
+    res.status(403).json({ error: 'Samo admin' }); return null;
+  }
+  return user;
+}
+
+/** Popravi poziciju taba Aktivnost (sidebar na laptopu + mobile nav) */
+function serveAdminHtml(req, res) {
+  try {
+    let html = fs.readFileSync(path.join(__dirname, 'public/pages/admin.html'), 'utf8');
+
+    // Ukloni pogrešno ubačeno dugme (sb-item unutar mobile-nav)
+    html = html.replace(
+      /\s*<button class="sb-item" data-page="presence"[^>]*>[\s\S]*?<\/button>/,
+      ''
+    );
+
+    const sidebarBtn = `<button class="sb-item" data-page="presence" onclick="switchPage(this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+    Aktivnost
+    <span class="sb-badge" id="sb-online-count" style="display:none">0</span>
+  </button>`;
+
+    const mobileBtn = `<button class="mobile-nav-item" data-page="presence" onclick="switchPage(this); typeof closeMobileNav==='function'&&closeMobileNav();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+      Aktivnost
+      <span class="nav-badge" id="mob-online-count">0</span>
+    </button>`;
+
+    // Sidebar: dodaj ako nema
+    if (!html.includes('class="sb-item" data-page="presence"')) {
+      if (html.includes('data-page="materials" onclick="switchPage(this)"')) {
+        html = html.replace(
+          '<button class="sb-item" data-page="materials" onclick="switchPage(this)">',
+          sidebarBtn + '\n  <button class="sb-item" data-page="materials" onclick="switchPage(this)">'
+        );
+      } else if (html.includes('data-page="students" onclick="switchPage(this)"')) {
+        html = html.replace(
+          /(<button class="sb-item" data-page="students" onclick="switchPage\(this\)">[\s\S]*?<\/button>)/,
+          '$1\n' + sidebarBtn
+        );
+      }
+    }
+
+    // Mobile nav: dodaj ako nema
+    if (!html.includes('mobile-nav-item" data-page="presence"') && !html.includes("mobile-nav-item' data-page='presence'")) {
+      if (html.includes('data-page="materials" onclick="switchPage(this); closeMobileNav')) {
+        html = html.replace(
+          /<button class="mobile-nav-item" data-page="materials"/,
+          mobileBtn + '\n    <button class="mobile-nav-item" data-page="materials"'
+        );
+      } else if (html.includes('class="mobile-nav-items"')) {
+        html = html.replace(
+          '</div>\n</nav>\n\n<!-- SIDEBAR -->',
+          mobileBtn + '\n  </div>\n</nav>\n\n<!-- SIDEBAR -->'
+        );
+      }
+    }
+
+    // Sync mobile badge u loadPresence
+    if (html.includes("sb-online-count") && !html.includes('mob-online-count')) {
+      html = html.replace(
+        "if (badge) { badge.textContent = data.onlineCount ?? 0; badge.style.display = 'inline'; }",
+        "if (badge) { badge.textContent = data.onlineCount ?? 0; badge.style.display = 'inline'; }\n"
+        + "    const mobBadge = document.getElementById('mob-online-count');\n"
+        + "    if (mobBadge) mobBadge.textContent = data.onlineCount ?? 0;"
+      );
+    }
+
+    res.type('html').send(html);
+  } catch (e) {
+    console.error('serveAdminHtml', e);
+    res.sendFile(path.join(__dirname, 'public/pages/admin.html'));
+  }
+}
+
 app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'public/pages/login.html')));
 app.get('/login',       (req, res) => res.sendFile(path.join(__dirname, 'public/pages/login.html')));
-app.get('/admin',       (req, res) => res.sendFile(path.join(__dirname, 'public/pages/admin.html')));
+app.get('/admin',       serveAdminHtml);
 app.get('/student',     (req, res) => res.sendFile(path.join(__dirname, 'public/pages/student.html')));
 app.get('/create-quiz', (req, res) => res.sendFile(path.join(__dirname, 'public/pages/create-quiz.html')));
 app.get('/take-quiz',   (req, res) => res.sendFile(path.join(__dirname, 'public/pages/take-quiz.html')));
@@ -70,366 +163,87 @@ app.get('/result',      (req, res) => res.sendFile(path.join(__dirname, 'public/
 app.get('/materijali',  (req, res) => res.redirect('/student'));
 app.get('/viewer',      (req, res) => res.sendFile(path.join(__dirname, 'public/pages/material.html')));
 
-// ── API: HEALTH ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
-// ── API: DELETE USER ─────────────────────────────────────────────────────────
+// Presence
+app.use(createPresenceRouter({ getUser, requireAdmin, getDb: () => adminDb }));
+
+// Materials + Drive
+const storageStore = createStorageStore({ getBucket: () => adminBucket });
+const driveCtrl = createDriveController({ getDb: () => adminDb });
+const driveStore = createDriveStore({ getController: () => driveCtrl });
+register('storage', storageStore);
+register('drive', driveStore);
+
+app.use(createMaterialsRouter({
+  upload,
+  getUser,
+  requireAdmin,
+  getDb: () => adminDb,
+  primaryStore,
+  storeForMaterial,
+  maxUploadMb: MAX_UPLOAD_MB
+}));
+app.use(createDriveRouter({ getUser, requireAdmin, getController: () => driveCtrl }));
+
+// ── Admin user management
 app.delete('/api/admin/user/:uid', async (req, res) => {
-  if (!adminAuth)
-    return res.status(503).json({ error: 'Firebase Admin nije konfigurisan' });
+  if (!adminAuth) return res.status(503).json({ error: 'Firebase nije spreman' });
+  const admin = await requireAdmin(req, res); if (!admin) return;
   try {
     await adminAuth.deleteUser(req.params.uid);
+    if (adminDb) await adminDb.collection('users').doc(req.params.uid).delete();
     res.json({ success: true });
-  } catch(e) {
-    if (e.code === 'auth/user-not-found')
-      res.json({ success: true, note: 'Korisnik nije bio u Authu' });
-    else
-      res.status(500).json({ error: e.message });
-  }
-});
-
-// ── API: UPDATE USER (razred, smjer, ime) ────────────────────────────────────
-app.put('/api/admin/user/:uid', async (req, res) => {
-  if (!adminDb)
-    return res.status(503).json({ error: 'Firebase Admin nije konfigurisan' });
-  try {
-    const { razred, smjer, displayName } = req.body;
-    if (!razred) return res.status(400).json({ error: 'Razred je obavezan' });
-
-    const validRazredi = ["I-T5","II-S2","II-P","III-S1","III-T3","III-T5","III-T6","IV-T3","IV-T5"];
-    // Allow custom razred too, ali ga normalizuj ("iii t5" → "III-T5") tako da
-    // se uvijek poklopi sa razredima označenim na materijalima.
-    const cleanRazred = normalizeRazred(razred);
-    if (!cleanRazred) return res.status(400).json({ error: 'Razred je obavezan' });
-    const cleanSmjer  = smjer ? String(smjer).trim() : '';
-    const cleanName   = displayName ? String(displayName).trim() : '';
-
-    const updateData = {
-      razred: cleanRazred,
-      updatedAt: new Date().toISOString()
-    };
-    if (cleanSmjer)  updateData.smjer = cleanSmjer;
-    if (cleanName)   updateData.displayName = cleanName;
-
-    await adminDb.collection('users').doc(req.params.uid).update(updateData);
-
-    // Also update existing results razred snapshot if you want? Keep optional - we update razred field in results for consistency
-    try {
-      const resultsSnap = await adminDb.collection('results').where('userId','==', req.params.uid).get();
-      const batch = adminDb.batch();
-      resultsSnap.forEach(docSnap => {
-        batch.update(docSnap.ref, { razred: cleanRazred });
-      });
-      if (!resultsSnap.empty) await batch.commit();
-    } catch(e) {
-      console.warn('⚠️  Neuspjelo ažuriranje razreda u rezultatima:', e.message);
-    }
-
-    res.json({ success: true, updated: updateData });
-  } catch(e) {
-    console.error('❌ update-user greška:', e);
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// LITERATURA / MATERIJALI (PDF, Word, ...)
-//
-// Fajlovi idu DIREKTNO u Firestore (chunk-ovi) — bez Firebase Storage-a,
-// bez Google Drive-a i bez ikakvog dodatnog setupa.
-// Sve rute su u lib/materials-router.js.
-// ════════════════════════════════════════════════════════════════════════════
-
-// ── Auth helper: čita Bearer ID token ────────────────────────────────────────
-async function getUser(req) {
-  if (!adminAuth || !adminDb) throw Object.assign(new Error('Firebase Admin nije konfigurisan'), { status: 503 });
-  const header = req.headers.authorization || '';
-  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) throw Object.assign(new Error('Niste prijavljeni'), { status: 401 });
-  const decoded = await adminAuth.verifyIdToken(token);
-  let data = {};
+app.put('/api/admin/user/:uid', async (req, res) => {
+  if (!adminDb) return res.status(503).json({ error: 'Firebase nije spreman' });
+  const admin = await requireAdmin(req, res); if (!admin) return;
   try {
-    const snap = await adminDb.collection('users').doc(decoded.uid).get();
-    data = snap.exists ? snap.data() : {};
+    const updates = {};
+    const { displayName, razred, smjer, role } = req.body || {};
+    if (displayName !== undefined) updates.displayName = displayName;
+    if (razred !== undefined) updates.razred = normalizeRazred(razred);
+    if (smjer !== undefined) updates.smjer = smjer;
+    if (role !== undefined) updates.role = role;
+    await adminDb.collection('users').doc(req.params.uid).set(updates, { merge: true });
+    res.json({ success: true });
   } catch (e) {
-    // Firestore kvota (npr. besplatan Spark plan istrošen za dan) — gRPC poruka
-    // "8 RESOURCE_EXHAUSTED: Quota exceeded." nije čitljiva, pa je prevedemo.
-    if (/RESOURCE_EXHAUSTED|quota exceeded/i.test(e?.message || '')) {
-      throw Object.assign(new Error(
-        'Firebase baza (Firestore) je na kvoti — probaj za nekoliko minuta, ' +
-        'ili provjeri Usage u Firebase konzoli (Blaze plan uklanja ova ograničenja).'
-      ), { status: 503 });
-    }
-    throw e;
-  }
-  return { uid: decoded.uid, email: decoded.email, role: data.role || 'student', razred: data.razred || '', displayName: data.displayName || decoded.email };
-}
-async function requireAdmin(req) {
-  const u = await getUser(req);
-  if (u.role !== 'admin') throw Object.assign(new Error('Nemate dozvolu'), { status: 403 });
-  return u;
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// SKLADIŠTE MATERIJALA: Google Drive
-//
-// Fajl se uplouduje sa naše stranice DIREKTNO na Google Drive vlasnika
-// (administratora). Nema Firebase Storage-a i nema čuvanja fajlova u bazi.
-//
-// Veza se uspostavlja iz admin panela (Literatura → "Poveži Google Drive")
-// ili, ako želiš, kredencijalima u env varijablama (GOOGLE_OAUTH_*).
-// ════════════════════════════════════════════════════════════════════════════
-
-const SETTINGS_COLLECTION = 'settings';
-const DRIVE_DOC           = 'drive';
-
-const drive = createDriveController({
-  envCfg: readDriveConfig(),
-  getSettings: async () => {
-    if (!adminDb) return null;
-    const snap = await adminDb.collection(SETTINGS_COLLECTION).doc(DRIVE_DOC).get();
-    return snap.exists ? snap.data() : null;
-  },
-  saveSettings: async (data) => {
-    if (!adminDb) throw new Error('Baza nije konfigurisana');
-    await adminDb.collection(SETTINGS_COLLECTION).doc(DRIVE_DOC).set(data, { merge: true });
-  },
-  clearSettings: async () => {
-    if (!adminDb) return;
-    await adminDb.collection(SETTINGS_COLLECTION).doc(DRIVE_DOC).delete().catch(() => {});
+    res.status(500).json({ error: e.message });
   }
 });
 
-register(createDriveStore(() => drive.client()), { priority: 1 });
-if (adminBucket) register(createStorageStore(adminBucket), { priority: 90 });   // samo stari materijali
-
-app.use(createDriveRouter({ requireAdmin, drive }));
-
-app.use(createMaterialsRouter({
-  getDb:          () => adminDb,
-  storeForMaterial,
-  primaryStore:   () => primaryStore(),
-  maxUploadMb:    MAX_UPLOAD_MB,
-  getUser,
-  requireAdmin,
-  upload
-}));
-
-app.use(createPresenceRouter({ getUser, requireAdmin, getDb: () => adminDb }));
-
-// Na startu provjeri da li je Drive povezan (samo log, ne blokira server)
-setTimeout(() => {
-  if (!adminDb) return;
-  drive.status()
-    .then(st => {
-      if (st.connected) {
-        console.log(`✅ Google Drive povezan (${st.mode === 'oauth' ? 'lični Drive' : 'service account'})${st.email ? ' — ' + st.email : ''}`);
-      } else if (st.source) {
-        console.warn('⚠️  Google Drive:', st.error || 'kredencijali ne rade');
-      } else {
-        console.warn('⚠️  Google Drive nije povezan — otvori /admin → Literatura i klikni "Poveži Google Drive".');
-      }
-    })
-    .catch(() => {});
-}, 1500);
-
-// ════════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════════════════════════════════════════════
-
-// ── Fisher-Yates shuffle ─────────────────────────────────────────────────────
-function fisherYates(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// ── Shuffle opcija jednog pitanja ────────────────────────────────────────────
-// Miješa opcije ali čuva koji je tačan odgovor
-function serverShuffleQuestion(q) {
-  // true_false ne miješamo (Tačno/Netačno ostaje kako jeste)
-  if (q.type === 'true_false' || !q.options) return q;
-
-  const correct  = q.correctAnswer;
-  const shuffled = fisherYates(q.options);
-  return { ...q, options: shuffled, correctAnswer: correct };
-}
-
-// ── Enforce distribucija tačnih odgovora ─────────────────────────────────────
-// Garantuje da nijedna pozicija (1., 2., 3., 4.) nema više od 35% tačnih
-function serverEnforceDistribution(questions) {
-  const mcQuestions = questions
-    .map((q, i) => ({ q, i }))
-    .filter(({ q }) =>
-      q.type === 'multiple_choice' &&
-      Array.isArray(q.options) &&
-      q.options.length >= 2
-    );
-
-  if (mcQuestions.length < 4) return questions;
-
-  const total     = mcQuestions.length;
-  const maxPerPos = Math.ceil(total * 0.35); // max 35% po poziciji
-
-  // Broji koliko puta je svaka pozicija tačna
-  const posCount = new Array(4).fill(0);
-  mcQuestions.forEach(({ q }) => {
-    const pos = q.options.indexOf(q.correctAnswer);
-    if (pos >= 0 && pos < 4) posCount[pos]++;
-  });
-
-  console.log('📊 Distribucija tačnih odgovora (prije enforce):', {
-    'Pozicija 1': posCount[0],
-    'Pozicija 2': posCount[1],
-    'Pozicija 3': posCount[2],
-    'Pozicija 4': posCount[3],
-  });
-
-  const result = [...questions];
-
-  // Sortiraj – prvo popravlja najpreopterećenije pozicije
-  const sorted = [...mcQuestions].sort((a, b) => {
-    const posA = a.q.options.indexOf(a.q.correctAnswer);
-    const posB = b.q.options.indexOf(b.q.correctAnswer);
-    return (posCount[posB] || 0) - (posCount[posA] || 0);
-  });
-
-  sorted.forEach(({ q, i }) => {
-    const currentPos = q.options.indexOf(q.correctAnswer);
-    if (currentPos < 0 || posCount[currentPos] <= maxPerPos) return;
-
-    // Nađi poziciju sa najmanje tačnih
-    const targetPos = posCount
-      .map((cnt, pos) => ({ cnt, pos }))
-      .filter(({ pos }) => pos !== currentPos && pos < q.options.length)
-      .sort((a, b) => a.cnt - b.cnt)[0]?.pos;
-
-    if (targetPos === undefined) return;
-
-    // Swap opcija na ciljanu poziciju
-    const newOpts = [...q.options];
-    [newOpts[currentPos], newOpts[targetPos]] = [newOpts[targetPos], newOpts[currentPos]];
-
-    posCount[currentPos]--;
-    posCount[targetPos]++;
-
-    result[i] = { ...q, options: newOpts };
-  });
-
-  console.log('📊 Distribucija tačnih odgovora (poslije enforce):', {
-    'Pozicija 1': posCount[0],
-    'Pozicija 2': posCount[1],
-    'Pozicija 3': posCount[2],
-    'Pozicija 4': posCount[3],
-  });
-
-  return result;
-}
-
-// ── Ukloni A) B) C) D) prefikse iz opcija ───────────────────────────────────
-function cleanPrefixes(questions) {
-  return questions.map(q => {
-    if (!q.options) return q;
-    const cleaned = q.options.map(o =>
-      o.replace(/^[A-Da-d][\)\.\s]\s*/,'').trim()
-    );
-    const newCorrect = q.correctAnswer
-      ? q.correctAnswer.replace(/^[A-Da-d][\)\.\s]\s*/,'').trim()
-      : undefined;
-    return {
-      ...q,
-      options:       cleaned,
-      correctAnswer: newCorrect,
-    };
-  });
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// API: GENERATE QUIZ
-// ════════════════════════════════════════════════════════════════════════════
+// ── Generate quiz
 app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
   try {
-    if (!req.file)
-      return res.status(400).json({ error: 'PDF fajl je obavezan' });
+    if (!req.file) return res.status(400).json({ error: 'PDF nije poslan' });
+    const numQuestions = parseInt(req.body.numQuestions || '10', 10);
+    const difficulty = req.body.difficulty || 'srednje';
+    const subject = req.body.subject || '';
+    const topic = req.body.topic || '';
+    let questionTypes = ['multiple_choice'];
+    try { questionTypes = JSON.parse(req.body.questionTypes || '[]'); } catch {}
+    if (!questionTypes.length) questionTypes = ['multiple_choice'];
 
-    const {
-      numQuestions      = 10,
-      difficulty        = 'srednje',
-      questionTypes     = 'multiple_choice',
-      subject           = '',
-      topic             = '',
-      batchIndex        = '0',
-      totalBatches      = '1',
-      existingQuestions = ''
-    } = req.body;
-
-    const num      = parseInt(numQuestions);
-    const bIdx     = parseInt(batchIndex);
-    const tBatches = parseInt(totalBatches);
-
-    // ── Parsiraj PDF ─────────────────────────────────────────────────────────
     const pdfData = await pdfParse(req.file.buffer);
-    const text    = pdfData.text.slice(0, 15000);
+    const text = (pdfData.text || '').slice(0, 12000);
+    if (text.length < 50) return res.status(400).json({ error: 'PDF nema dovoljno teksta' });
 
-    if (text.trim().length < 100)
-      return res.status(400).json({ error: 'PDF ne sadrži dovoljno teksta' });
+    const prompt = `Na osnovu sljedećeg nastavnog materijala generiši ${numQuestions} kviz pitanja na bosanskom jeziku.
+Predmet: ${subject || 'opće'}
+Tema: ${topic || 'opće'}
+Težina: ${difficulty}
+Tipovi: ${questionTypes.join(', ')}
 
-    // ── Težina ───────────────────────────────────────────────────────────────
-    const diffMap = {
-      lako:    'jednostavna pitanja, osnovno razumijevanje gradiva',
-      srednje: 'pitanja srednje težine, razumijevanje koncepta',
-      teško:   'izazovna pitanja, dublje razmišljanje i analiza'
-    };
-
-    // ── Tip pitanja (samo multiple_choice i true_false) ──────────────────────
-    let parsedTypes = [];
-    try   { parsedTypes = JSON.parse(questionTypes); }
-    catch { parsedTypes = [questionTypes]; }
-
-    let typeInstruction = '';
-    if (parsedTypes.includes('mixed')) {
-      typeInstruction = 'Mješovito: 70% multiple_choice (višestruki odabir, 4 opcije, SAMO 1 tačan odgovor), 30% true_false (tačno/netačno)';
-    } else {
-      const parts = [];
-      if (parsedTypes.includes('multiple_choice'))
-        parts.push('multiple_choice (višestruki odabir, 4 opcije, SAMO 1 tačan odgovor)');
-      if (parsedTypes.includes('true_false'))
-        parts.push('true_false (tačno/netačno)');
-      typeInstruction = parts.length > 0 ? parts.join(' + ') : 'multiple_choice (višestruki odabir, 4 opcije)';
-    }
-
-    // ── Avoid note za batches ────────────────────────────────────────────────
-    let avoidNote = '';
-    if (bIdx > 0 && existingQuestions) {
-      try {
-        const existing = JSON.parse(existingQuestions);
-        const titles   = existing.map((q, i) => `${i+1}. ${q.question}`).join('\n');
-        avoidNote = `\n\nVAŽNO: Ovo je batch ${bIdx + 1} od ${tBatches}.\nSljedeća pitanja su VEĆ GENERISANA — nemoj ih ponavljati niti praviti slična:\n${titles}\nGeneriši POTPUNO DRUGAČIJA pitanja koja pokrivaju druge aspekte gradiva.\n`;
-      } catch(e) { /* ignoriši */ }
-    }
-
-    // ── Prompt ───────────────────────────────────────────────────────────────
-    const prompt = `Si ekspert za obrazovanje. Generiši TAČNO ${num} pitanja za kviz na osnovu gradiva.${avoidNote}
-
-GRADIVO:
+Materijal:
 ${text}
 
-ZAHTJEVI:
-- Predmet: ${subject || 'Nije specificiran'}
-- Tema: ${topic || 'Iz gradiva'}
-- Težina: ${diffMap[difficulty] || diffMap.srednje}
-- Tip pitanja: ${typeInstruction}
-- Jezik: Bosanski/Hrvatski/Srpski
-- OBAVEZNO generiši TAČNO ${num} pitanja, ne manje
-
-Za multiple_choice: 4 opcije, SAMO 1 tačan odgovor. Tačni odgovori ravnomjerno raspoređeni po pozicijama.
-Za true_false: opcije ["Tačno", "Netačno"].
-
-Vrati ISKLJUČIVO validan JSON (bez markdown):
-{"questions":[{"type":"multiple_choice|true_false","question":"...","options":["..."],"correctAnswer":"...","explanation":"kratko"}]}`;
+Vrati ISKLJUČIVO validan JSON niz objekata oblika:
+[{"id":"q1","question":"...","options":["A","B","C","D"],"correctAnswer":"A","points":1,"explanation":"..."}]
+Bez markdowna, bez komentara.`;
 
     const response = await mistral.chat.complete({
       model: 'mistral-small-latest',
@@ -438,126 +252,99 @@ Vrati ISKLJUČIVO validan JSON (bez markdown):
       maxTokens: 4000
     });
 
-    let raw = response.choices[0].message.content || '';
-    raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-
-    let quiz;
-    try {
-      quiz = JSON.parse(raw);
-    } catch (e) {
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (!m) throw new Error('AI nije vratio validan JSON');
-      quiz = JSON.parse(m[0]);
-    }
-
-    if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length < Math.floor(num * 0.8))
-      throw new Error(`AI je generisao samo ${quiz.questions?.length || 0} pitanja`);
-
-    let questions = cleanPrefixes(quiz.questions.slice(0, num));
-    questions = questions.map(serverShuffleQuestion);
-    questions = serverEnforceDistribution(questions);
-
-    res.json({ success: true, questions, batchIndex: bIdx, totalBatches: tBatches });
+    let raw = response.choices[0].message.content.trim();
+    raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    const questions = JSON.parse(raw);
+    if (!Array.isArray(questions) || !questions.length) throw new Error('AI nije vratio pitanja');
+    res.json({ success: true, questions });
   } catch (e) {
-    console.error('❌ generate-quiz greška:', e);
-    res.status(500).json({ error: e.message || 'Greška pri generisanju kviza' });
+    console.error('generate-quiz', e);
+    res.status(500).json({ error: e.message || 'Greška pri generisanju' });
   }
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// API: GRADE
-// ════════════════════════════════════════════════════════════════════════════
+// ── Grade
 app.post('/api/grade', async (req, res) => {
   try {
-    const { answers, questions, studentName } = req.body;
-    if (!Array.isArray(answers) || !Array.isArray(questions))
-      return res.status(400).json({ error: 'Nedostaju answers ili questions' });
-
-    let earnedPoints = 0;
-    const totalPoints = questions.length;
-    const gradedAnswers = questions.map((q, i) => {
-      const given = answers[i];
-      const correct = q.correctAnswer;
-      const isCorrect = String(given || '').trim().toLowerCase() === String(correct || '').trim().toLowerCase();
-      if (isCorrect) earnedPoints++;
+    const { questions, studentAnswers, studentName } = req.body || {};
+    if (!Array.isArray(questions)) return res.status(400).json({ error: 'Nedostaju pitanja' });
+    let totalPoints = 0, earnedPoints = 0;
+    const gradedAnswers = questions.map((q) => {
+      const pts = q.points || 1;
+      totalPoints += pts;
+      const ans = studentAnswers?.[q.id];
+      const isCorrect = ans !== undefined && String(ans).trim() === String(q.correctAnswer).trim();
+      if (isCorrect) earnedPoints += pts;
       return {
+        questionId: q.id,
         question: q.question,
-        givenAnswer: given,
-        correctAnswer: correct,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        studentAnswer: ans ?? null,
         isCorrect,
+        points: pts,
+        earned: isCorrect ? pts : 0,
         explanation: q.explanation || ''
       };
     });
-
     const pct = totalPoints ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const gradeInfo = [
-      { min: 84, grade: 5, label: 'Odličan'    },
+      { min: 84, grade: 5, label: 'Odličan' },
       { min: 70, grade: 4, label: 'Vrlo dobar' },
-      { min: 54, grade: 3, label: 'Dobar'      },
-      { min: 37, grade: 2, label: 'Dovoljan'   },
-      { min: 0,  grade: 1, label: 'Nedovoljan' }
+      { min: 54, grade: 3, label: 'Dobar' },
+      { min: 37, grade: 2, label: 'Dovoljan' },
+      { min: 0, grade: 1, label: 'Nedovoljan' }
     ].find(g => pct >= g.min);
-
     res.json({
       success: true,
       result: {
         studentName, totalPoints, earnedPoints,
         percentage: pct,
-        grade:      gradeInfo.grade,
+        grade: gradeInfo.grade,
         gradeLabel: gradeInfo.label,
         gradedAnswers,
-        gradedAt:   new Date().toISOString()
+        gradedAt: new Date().toISOString()
       }
     });
-
   } catch (e) {
-    console.error('❌ grade greška:', e);
+    console.error('grade', e);
     res.status(500).json({ error: 'Greška pri ocjenjivanju' });
   }
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// API: FEEDBACK
-// ════════════════════════════════════════════════════════════════════════════
+// ── Feedback
 app.post('/api/feedback', async (req, res) => {
   try {
     const { result, quizTitle } = req.body;
-
-    const wrongAnswers = result.gradedAnswers
+    const wrongAnswers = (result.gradedAnswers || [])
       .filter(a => !a.isCorrect)
       .map(a => `- "${a.question}"`)
       .join('\n') || 'Nema grešaka!';
-
     const prompt = `Si nastavnik. Napiši 2-3 rečenice motivirajuće povratne informacije na bosanskom jeziku za učenika.
 Kviz: ${quizTitle}
 Rezultat: ${result.percentage}%, Ocjena: ${result.grade} (${result.gradeLabel})
 Pogrešna pitanja:\n${wrongAnswers}
 Budi direktan, konkretan i motivirajući.`;
-
     const response = await mistral.chat.complete({
-      model:       'mistral-small-latest',
-      messages:    [{ role: 'user', content: prompt }],
+      model: 'mistral-small-latest',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      maxTokens:   200
+      maxTokens: 200
     });
-
     res.json({ success: true, feedback: response.choices[0].message.content });
-
-  } catch(e) {
-    console.error('❌ feedback greška:', e);
+  } catch (e) {
+    console.error('feedback', e);
     res.json({ success: true, feedback: '' });
   }
 });
 
-// ── ERROR HANDLER (npr. preveliki fajl) ──────────────────────────────────────
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   if (err?.code === 'LIMIT_FILE_SIZE')
     return res.status(413).json({ error: `Fajl je prevelik. Maksimalno ${MAX_UPLOAD_MB} MB.` });
-  console.error('❌ Neobrađena greška:', err?.message || err);
+  console.error('error', err?.message || err);
   res.status(err?.status || 500).json({ error: err?.message || 'Greška na serveru' });
 });
 
-// ── START ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`🚀 KvizMajstor pokrenut na portu ${PORT}`));
