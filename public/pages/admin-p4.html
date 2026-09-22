@@ -1,0 +1,88 @@
+
+      <b>1.</b> Otvori
+      <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Google Drive API</a>
+      i klikni <b>Enable</b>.
+    </li>
+    <li style="margin-bottom:10px">
+      <b>2.</b> Otvori
+      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credentials</a>
+      → <b>Create Credentials</b> → <b>OAuth client ID</b>.
+    </li>
+    <li style="margin-bottom:10px">
+      <b>3.</b> Application type: <b>Web application</b>.
+      Under <b>Authorized redirect URIs</b> dodaj:
+      <code style="display:block;margin-top:6px;padding:8px;background:rgba(0,0,0,.3);border-radius:8px;font-size:12px;word-break:break-all">PLACEHOLDER_REDIRECT</code>
+    </li>
+    <li style="margin-bottom:10px">
+      <b>4.</b> Copy Client ID i Client Secret u env varijable na Renderu:
+      <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>.
+    </li>
+  </ol>
+  <p style="font-size:13px;color:var(--text3);margin-top:16px">
+    Nakon toga klikni "Poveži Google Drive" ispod.
+  </p>
+</div>
+
+<!-- Rest of original admin continues in combined loader; this part holds the presence JS and closing tags -->
+
+<script type="module">
+// NOTE: This part is concatenated with parts 1-3 by admin.html loader.
+// Full admin UI is in admin_restored; presence helpers below are included at end.
+</script>
+
+<script type="module">
+import { auth, db } from '/js/firebase-config.js';
+import { startPresence } from '/js/presence.js';
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+// Presence logic is also injected in the full combined document.
+// Minimal fallback if parts 1-3 already define loadPresence.
+if (typeof window.loadPresence !== 'function') {
+  let presenceUsers = [];
+  window.loadPresence = async function(silent) {
+    try {
+      const t = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/presence', { headers: { Authorization: 'Bearer ' + t } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Greška');
+      presenceUsers = data.users || [];
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('pres-online', data.onlineCount ?? 0);
+      set('pres-tracked', data.totalTracked ?? presenceUsers.length);
+      set('pres-updated', new Date().toLocaleTimeString('bs'));
+      const badge = document.getElementById('sb-online-count');
+      if (badge) { badge.textContent = data.onlineCount ?? 0; badge.style.display = 'inline'; }
+      if (typeof filterPresence === 'function') filterPresence();
+      else if (window.filterPresence) window.filterPresence();
+    } catch (e) {
+      if (!silent) console.error(e);
+    }
+  };
+  window.filterPresence = function() {
+    const q = (document.getElementById('pres-search')?.value || '').toLowerCase().trim();
+    const f = document.getElementById('pres-filter')?.value || 'all';
+    let list = presenceUsers.slice();
+    if (f === 'online') list = list.filter(u => u.online);
+    else if (f === 'admin') list = list.filter(u => u.role === 'admin');
+    else if (f === 'student') list = list.filter(u => u.role !== 'admin');
+    if (q) list = list.filter(u =>
+      (u.displayName || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.ip || '').toLowerCase().includes(q)
+    );
+    const tb = document.getElementById('pres-tbody');
+    if (!tb) return;
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:28px;color:#64748B">Nema podataka</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map(u => {
+      const status = u.online ? '<span style="color:#34D399">● Online</span>' : '<span style="color:#94A3B8">Offline</span>';
+      return '<tr><td>' + status + '</td><td>' + (u.displayName||'—') + '<br><small>' + (u.email||'') + '</small></td><td>' + (u.role||'') + '</td><td>' + (u.razred||'—') + '</td><td>' + (u.ip||'—') + '</td><td>' + (u.page||'—') + '</td><td>' + (u.lastSeen||'—') + '</td></tr>';
+    }).join('');
+  };
+}
+</script>
+</body>
+</html>
