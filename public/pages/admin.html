@@ -10,16 +10,16 @@
   <script>
   (async () => {
     try {
-      const urls = ['/pages/admin-p1.html?v=2', '/pages/admin-p2.html?v=2', '/pages/admin-p3.html?v=2', '/pages/admin-p4.html?v=2'];
+      const urls = ['/pages/admin-s1.html?v=5','/pages/admin-s2.html?v=5','/pages/admin-s3.html?v=5','/pages/admin-s4.html?v=5','/pages/admin-s5.html?v=5','/pages/admin-s6.html?v=5'];
       const parts = await Promise.all(urls.map(u => fetch(u).then(r => {
-        if (!r.ok) throw new Error(u + ' ' + r.status);
+        if (!r.ok) throw new Error(u + ' → ' + r.status);
         return r.text();
       })));
       document.open();
       document.write(parts.join(''));
       document.close();
     } catch (e) {
-      document.body.innerHTML = '<p style="color:#F87171">Greška: ' + e.message + '</p>';
+      document.body.innerHTML = '<div style="max-width:400px;text-align:center"><p style="color:#F87171;margin-bottom:12px">Greška: ' + e.message + '</p><p style="font-size:13px">Sačekaj deploy ili osvježi (Ctrl+Shift+R).</p></div>';
     }
   })();
   </script>
