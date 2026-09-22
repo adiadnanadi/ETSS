@@ -1,1 +1,169 @@
-REDIRECT_STUB2
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KvizMajstor — Učenik</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    body { font-family: var(--fb, sans-serif); background: #0F1123; min-height: 100vh; color: #E2E8F0; }
+    .hero { padding: 32px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .hero-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    .hero-sub { color: #64748B; font-size: 14px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 14px; margin: 24px 0; }
+    .stat { background: rgba(30,32,48,.9); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; padding: 18px; text-align: center; }
+    .stat-v { font-size: 28px; font-weight: 800; color: #818CF8; }
+    .stat-l { font-size: 12px; color: #64748B; text-transform: uppercase; margin-top: 4px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab { padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); background: transparent; color: #94A3B8; cursor: pointer; font-weight: 600; }
+    .tab.active { background: #6366F1; color: #fff; border-color: transparent; }
+    .quiz-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 16px; }
+    .qcard { background: rgba(30,32,48,.9); border: 1px solid rgba(255,255,255,.06); border-radius: 16px; padding: 20px; }
+    .qcard h3 { font-size: 16px; margin-bottom: 8px; }
+    .qcard p { font-size: 13px; color: #64748B; margin-bottom: 14px; }
+    .empty { text-align: center; padding: 48px; color: #64748B; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="wrap">
+      <a class="nb-brand" href="/student"><span class="nb-logo">📚</span><span class="nb-title">KvizMajstor</span></a>
+      <div class="nb-right">
+        <span class="nb-user" id="nb-email"></span>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="wrap">
+      <div class="hero-title" id="hero-name">Zdravo!</div>
+      <div class="hero-sub"><span id="user-razred">—</span> · <span id="user-smjer">—</span></div>
+    </div>
+  </div>
+
+  <div class="wrap" style="padding-bottom:60px">
+    <div class="stats">
+      <div class="stat"><div class="stat-v" id="s-available">—</div><div class="stat-l">Dostupni kvizovi</div></div>
+      <div class="stat"><div class="stat-v" id="s-done">—</div><div class="stat-l">Riješeno</div></div>
+      <div class="stat"><div class="stat-v" id="s-avg">—</div><div class="stat-l">Prosjek %</div></div>
+      <div class="stat"><div class="stat-v" id="s-mats">—</div><div class="stat-l">Literatura</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="quizzes" onclick="switchTab(this)">Kvizovi</button>
+      <button class="tab" data-tab="results" onclick="switchTab(this)">Moji rezultati</button>
+      <button class="tab" data-tab="materials" onclick="switchTab(this)">Literatura</button>
+    </div>
+
+    <div id="tab-quizzes">
+      <div class="quiz-grid" id="quiz-grid"><div class="empty">Učitavanje...</div></div>
+    </div>
+    <div id="tab-results" style="display:none">
+      <div id="results-list"><div class="empty">Učitavanje...</div></div>
+    </div>
+    <div id="tab-materials" style="display:none">
+      <div id="mats-list"><div class="empty">Učitavanje...</div></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/js/firebase-config.js';
+    import { startPresence } from '/js/presence.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { collection, getDocs, doc, getDoc, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { toast, fmtDate } from '/js/utils.js';
+
+    let uid = null, userData = null, myResults = [], materials = [];
+
+    window.switchTab = (btn) => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      ['quizzes','results','materials'].forEach(id => {
+        document.getElementById('tab-' + id).style.display = btn.dataset.tab === id ? 'block' : 'none';
+      });
+    };
+
+    onAuthStateChanged(auth, async (u) => {
+      if (!u) { location.href = '/login'; return; }
+      if (!u.emailVerified) { await signOut(auth); location.href = '/login'; return; }
+      uid = u.uid;
+      startPresence('/student');
+      document.getElementById('nb-email').textContent = u.email;
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      userData = snap.data() || {};
+      if (userData.role === 'admin') { location.href = '/admin'; return; }
+      document.getElementById('hero-name').textContent = 'Zdravo, ' + (userData.displayName || u.email.split('@')[0]) + '!';
+      document.getElementById('user-razred').textContent = userData.razred || 'Razred nije postavljen';
+      document.getElementById('user-smjer').textContent = userData.smjer || '';
+      await loadAll();
+    });
+
+    document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.href = '/login');
+
+    async function loadAll() {
+      try {
+        const [qs, rs] = await Promise.all([
+          getDocs(query(collection(db, 'quizzes'), where('status', '==', 'active'))),
+          getDocs(query(collection(db, 'results'), where('userId', '==', uid)))
+        ]);
+        const quizzes = qs.docs.map(d => ({ id: d.id, ...d.data() }));
+        myResults = rs.docs.map(d => ({ id: d.id, ...d.data() }));
+        const doneIds = new Set(myResults.map(r => r.quizId));
+
+        document.getElementById('s-available').textContent = quizzes.length;
+        document.getElementById('s-done').textContent = myResults.length;
+        const avg = myResults.length ? Math.round(myResults.reduce((a,r) => a + (r.percentage||0), 0) / myResults.length) : 0;
+        document.getElementById('s-avg').textContent = avg + '%';
+
+        const grid = document.getElementById('quiz-grid');
+        if (!quizzes.length) {
+          grid.innerHTML = '<div class="empty">Nema aktivnih kvizova.</div>';
+        } else {
+          grid.innerHTML = quizzes.map(q => {
+            const done = doneIds.has(q.id);
+            const res = myResults.find(r => r.quizId === q.id);
+            return '<div class="qcard"><h3>' + (q.title||'Kviz') + '</h3>' +
+              '<p>' + (q.subject||'') + (q.topic ? ' · ' + q.topic : '') + '</p>' +
+              (done ? '<div style="margin-bottom:10px;color:#34D399;font-weight:600">✓ ' + (res?.percentage??'—') + '% · ocjena ' + (res?.grade??'—') + '</div>' : '') +
+              '<div style="display:flex;gap:8px">' +
+              (done
+                ? '<a class="btn btn-ghost btn-sm" href="/result?id=' + res.id + '">Rezultat</a>'
+                : '<a class="btn btn-primary btn-sm" href="/take-quiz?id=' + q.id + '">▶ Pokreni</a>') +
+              '</div></div>';
+          }).join('');
+        }
+
+        const rl = document.getElementById('results-list');
+        if (!myResults.length) rl.innerHTML = '<div class="empty">Još nema rezultata.</div>';
+        else rl.innerHTML = myResults.sort((a,b) => (b.completedAt||'').localeCompare(a.completedAt||'')).map(r =>
+          '<div class="qcard" style="margin-bottom:10px"><strong>' + (r.quizTitle||'Kviz') + '</strong>' +
+          '<div style="font-size:13px;color:#94A3B8;margin:6px 0">' + (r.percentage??'—') + '% · ocjena ' + (r.grade??'—') + ' · ' + (r.completedAt ? new Date(r.completedAt).toLocaleString('bs') : '') + '</div>' +
+          '<a class="btn btn-ghost btn-sm" href="/result?id=' + r.id + '">Detalji</a></div>'
+        ).join('');
+
+        // Literature
+        try {
+          const token = await auth.currentUser.getIdToken();
+          const mres = await fetch('/api/materials', { headers: { Authorization: 'Bearer ' + token } });
+          const mdata = await mres.json();
+          materials = mdata.materials || [];
+          document.getElementById('s-mats').textContent = materials.length;
+          const ml = document.getElementById('mats-list');
+          if (!materials.length) ml.innerHTML = '<div class="empty">Nema literature.</div>';
+          else ml.innerHTML = materials.map(m =>
+            '<div class="qcard" style="margin-bottom:10px"><strong>' + (m.title||m.fileName||'Materijal') + '</strong>' +
+            '<div style="font-size:13px;color:#64748B;margin:6px 0">' + (m.subject||'') + '</div>' +
+            '<a class="btn btn-primary btn-sm" href="/viewer?id=' + m.id + '" target="_blank">Otvori</a></div>'
+          ).join('');
+        } catch(e) {
+          document.getElementById('s-mats').textContent = '0';
+          document.getElementById('mats-list').innerHTML = '<div class="empty">Literatura trenutno nije dostupna.</div>';
+        }
+      } catch(e) {
+        toast(e.message || 'Greška pri učitavanju', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
