@@ -4,2149 +4,252 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KvizMajstor — Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css"/>
   <style>
-    :root {
-      --jk: 'Plus Jakarta Sans', sans-serif;
-      --mono: 'JetBrains Mono', monospace;
-      --accent: #6366F1;
-      --accent-light: #818CF8;
-      --accent-dim: rgba(99,102,241,.15);
-      --accent2: #22D3EE;
-      --accent3: #F472B6;
-      --amber: #FBBF24;
-      --green: #34D399;
-      --green-dim: rgba(52,211,153,.15);
-      --purple: #A78BFA;
-      --teal: #2DD4BF;
-      --red: #F87171;
-      --red-dim: rgba(248,113,113,.15);
-      --sidebar-w: 260px;
-      --top-h: 64px;
-      --r: 14px;
-      --r-sm: 10px;
-      --r-lg: 20px;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
-      --shadow-md: 0 4px 12px rgba(0,0,0,.4);
-      --shadow-lg: 0 8px 30px rgba(0,0,0,.5);
-    }
-
-    .filter-select option,
-    .sel2 option {
-      background: #1E2030;
-      color: #ffffff;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--jk); background: #0F1123; color: #E2E8F0; min-height: 100vh; }
-
-    /* ── TOPBAR ─────────────────────────────────── */
-    .topbar {
-      position: fixed; top: 0; left: 0; right: 0; height: var(--top-h);
-      background: rgba(15,17,35,.85); backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      display: flex; align-items: center; padding: 0 24px; gap: 16px; z-index: 200;
-    }
-    .tb-brand { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 800; letter-spacing: -.02em; color: #fff; text-decoration: none; }
-    .tb-logo { width: 36px; height: 36px; background: linear-gradient(135deg,#6366F1,#22D3EE); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-    .tb-logo svg { width: 20px; height: 20px; color: #fff; }
-    .tb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-    .tb-pill { background: var(--accent-dim); border: 1px solid rgba(99,102,241,.3); color: var(--accent-light); font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 50px; letter-spacing: .03em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
-    .tb-pill svg { width: 14px; height: 14px; }
-    .tb-email { font-size: 13px; color: #94A3B8; font-family: var(--mono); }
-    .tb-btn { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #94A3B8; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-family: var(--jk); transition: all .2s; display: flex; align-items: center; gap: 6px; }
-    .tb-btn:hover { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.15); }
-    .tb-btn svg { width: 16px; height: 16px; }
-
-    /* ── SIDEBAR ─────────────────────────────────── */
-    .sidebar {
-      position: fixed; top: var(--top-h); left: 0; bottom: 0; width: var(--sidebar-w);
-      background: rgba(15,17,35,.95); border-right: 1px solid rgba(255,255,255,.05);
-      padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; z-index: 100;
-      overflow-y: auto;
-    }
-    .sb-section { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.25); padding: 16px 12px 8px; }
-    .sb-item {
-      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-      border-radius: var(--r-sm); cursor: pointer; font-size: 14px; font-weight: 500;
-      color: #64748B; transition: all .2s; text-decoration: none; border: none; background: none; width: 100%; text-align: left;
-    }
-    .sb-item svg { width: 18px; height: 18px; flex-shrink: 0; transition: all .2s; }
-    .sb-item:hover { background: rgba(255,255,255,.04); color: #CBD5E1; }
-    .sb-item.active { background: var(--accent-dim); color: var(--accent-light); }
-    .sb-item.active svg { color: var(--accent); }
-    .sb-badge { margin-left: auto; background: var(--accent-dim); color: var(--accent-light); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 50px; }
-    .sb-badge.green { background: var(--green-dim); color: var(--green); }
-
-    /* ── MAIN ─────────────────────────────────── */
-    .main { margin-left: var(--sidebar-w); margin-top: var(--top-h); padding: 32px 32px 60px; min-height: calc(100vh - var(--top-h)); }
-    .page { display: none; animation: fadeIn .3s ease; }
-    .page.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-    /* ── PAGE HEADERS ─────────────────────────────────── */
-    .ph { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 20px; flex-wrap: wrap; }
-    .ph-title { font-size: 26px; font-weight: 800; letter-spacing: -.02em; background: linear-gradient(135deg,#fff,#94A3B8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .ph-sub { font-size: 14px; color: #64748B; margin-top: 4px; }
-
-    /* ── STAT CARDS ─────────────────────────────────── */
-    .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-bottom: 28px; }
-    .stat-card {
-      background: linear-gradient(135deg,rgba(30,32,48,.8),rgba(20,22,38,.9)); border: 1px solid rgba(255,255,255,.06);
-      border-radius: var(--r); padding: 20px 22px; position: relative; overflow: hidden;
-      transition: all .3s cubic-bezier(.4,0,.2,1);
-    }
-    .stat-card::before { content: ''; position: absolute; top: 0; right: 0; width: 80px; height: 80px; background: var(--glow); border-radius: 50%; transform: translate(30%,-30%); opacity: 0.3; filter: blur(20px); transition: opacity .3s; }
-    .stat-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg), 0 0 30px rgba(99,102,241,.1); }
-    .stat-card:hover::before { opacity: 0.5; }
-    .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; position: relative; z-index: 1; }
-    .stat-icon svg { width: 22px; height: 22px; }
-    .stat-v { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-bottom: 6px; position: relative; z-index: 1; }
-    .stat-l { font-size: 12px; color: #64748B; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
-
-    /* ── CARDS ─────────────────────────────────── */
-    .card { background: linear-gradient(135deg,rgba(30,32,48,.9),rgba(20,22,38,.95)); border: 1px solid rgba(255,255,255,.06); border-radius: var(--r-lg); padding: 24px; transition: all .2s; }
-    .card:hover { border-color: rgba(255,255,255,.1); }
-    .card-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; color: #fff; }
-    .card-title svg { width: 18px; height: 18px; color: var(--accent-light); }
-
-    /* ── SEARCH & FILTERS ─────────────────────────────────── */
-    .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
-    .search-wrap { position: relative; flex: 1; min-width: 240px; }
-    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; }
-    .search-icon svg { width: 18px; height: 18px; color: #475569; }
-    .search-input {
-      width: 100%; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
-      border-radius: var(--r-sm); padding: 11px 14px 11px 42px; font-size: 14px;
-      color: #fff; font-family: var(--jk); outline: none; transition: all .2s;
-    }
-    .search-input:focus { border-color: var(--accent); background: var(--accent-dim); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
-    .search-input::placeholder { color: #475569; }
-    .filter-select {
-      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
-      border-radius: var(--r-sm); padding: 11px 14px; font-size: 13px; color: #CBD5E1;
-      font-family: var(--jk); outline: none; cursor: pointer; transition: all .2s;
-    }
-    .filter-select:focus { border-color: var(--accent); background: var(--accent-dim); }
-    .filter-count { font-size: 13px; color: #64748B; margin-left: auto; white-space: nowrap; }
-
-    /* ── TABLE ─────────────────────────────────── */
-    .tbl-wrap { overflow-x: auto; }
-    table.tbl2 { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
-    .tbl2 thead th { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #475569; padding: 8px 16px; text-align: left; }
-    .tbl2 tbody tr { background: rgba(255,255,255,.02); transition: all .15s; cursor: default; border-radius: 10px; }
-    .tbl2 tbody tr:hover { background: var(--accent-dim); }
-    .tbl2 tbody td { padding: 14px 16px; font-size: 14px; vertical-align: middle; }
-    .tbl2 tbody td:first-child { border-radius: 10px 0 0 10px; }
-    .tbl2 tbody td:last-child { border-radius: 0 10px 10px 0; }
-
-    /* ── BADGES ─────────────────────────────────── */
-    .badge2 { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 50px; letter-spacing: .02em; }
-    .badge2.green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52,211,153,.2); }
-    .badge2.amber { background: rgba(251,191,36,.12); color: var(--amber); border: 1px solid rgba(251,191,36,.2); }
-    .badge2.purple { background: rgba(167,139,250,.12); color: var(--purple); border: 1px solid rgba(167,139,250,.2); }
-    .badge2.blue { background: rgba(34,211,238,.12); color: var(--accent2); border: 1px solid rgba(34,211,238,.2); }
-    .badge2.red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,113,113,.2); }
-    .badge2.gray { background: rgba(255,255,255,.06); color: #94A3B8; border: 1px solid rgba(255,255,255,.1); }
-
-    /* ── BUTTONS ─────────────────────────────────── */
-    .btn2 { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer; font-family: var(--jk); transition: all .2s; text-decoration: none; }
-    .btn2 svg { width: 16px; height: 16px; }
-    .btn2-sm { font-size: 12px; padding: 7px 12px; border-radius: 8px; }
-    .btn2-primary { background: linear-gradient(135deg,#6366F1,#4F46E5); color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,.3); }
-    .btn2-primary:hover { background: linear-gradient(135deg,#7C7FF2,#6366F1); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,.4); }
-    .btn2-success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52,211,153,.2); }
-    .btn2-success:hover { background: rgba(52,211,153,.25); }
-    .btn2-amber { background: rgba(251,191,36,.12); color: var(--amber); border: 1px solid rgba(251,191,36,.2); }
-    .btn2-amber:hover { background: rgba(251,191,36,.2); }
-    .btn2-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,113,113,.2); }
-    .btn2-danger:hover { background: rgba(248,113,113,.25); }
-    .btn2-ghost { background: rgba(255,255,255,.05); color: #94A3B8; border: 1px solid rgba(255,255,255,.08); }
-    .btn2-ghost:hover { background: rgba(255,255,255,.1); color: #fff; }
-    .btn2-teal { background: rgba(34,211,238,.12); color: var(--accent2); border: 1px solid rgba(34,211,238,.2); }
-    .btn2-teal:hover { background: rgba(34,211,238,.2); }
-
-    /* ── QUIZ CARDS GRID ─────────────────────────────────── */
-    .quiz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
-    .quiz-card { background: linear-gradient(135deg,rgba(30,32,48,.9),rgba(20,22,38,.95)); border: 1px solid rgba(255,255,255,.06); border-radius: var(--r-lg); padding: 22px; display: flex; flex-direction: column; gap: 14px; transition: all .3s cubic-bezier(.4,0,.2,1); }
-    .quiz-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: var(--shadow-lg), 0 0 40px rgba(99,102,241,.08); }
-    .quiz-card.active-card { border-color: rgba(52,211,153,.3); }
-    .qc-title2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; color: #fff; }
-    .qc-desc2 { font-size: 13px; color: #64748B; line-height: 1.5; }
-    .qc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip2 { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 8px; background: rgba(255,255,255,.04); color: #94A3B8; border: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; gap: 5px; }
-    .chip2 svg { width: 14px; height: 14px; }
-    .qc-footer { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.05); }
-
-    /* ── PCT BAR ─────────────────────────────────── */
-    .pct-bar { display: flex; align-items: center; gap: 10px; }
-    .bar-track { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 99px; overflow: hidden; min-width: 60px; }
-    .bar-fill { height: 100%; border-radius: 99px; transition: width .5s cubic-bezier(.4,0,.2,1); }
-    .bar-val { font-size: 13px; font-weight: 700; font-family: var(--mono); min-width: 40px; text-align: right; }
-
-    /* ── AVATAR ─────────────────────────────────── */
-    .avatar { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-
-    /* ── OVERVIEW GRID ─────────────────────────────────── */
-    .ov-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
-    @media(max-width: 1100px) { .ov-grid { grid-template-columns: 1fr; } }
-
-    /* ── QUICK ACTIVITY ─────────────────────────────────── */
-    .act-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.04); transition: all .15s; }
-    .act-item:last-child { border-bottom: none; }
-    .act-item:hover { padding-left: 8px; }
-    .act-info { flex: 1; min-width: 0; }
-    .act-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .act-sub { font-size: 12px; color: #64748B; margin-top: 2px; }
-    .act-meta { text-align: right; flex-shrink: 0; }
-
-    /* ── MODALS ─────────────────────────────────── */
-    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: flex; align-items: center; justify-content: center; z-index: 500; backdrop-filter: blur(8px); }
-    .modal2 { background: linear-gradient(135deg,#1E2030,#161824); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 28px; width: 90%; max-width: 500px; box-shadow: var(--shadow-lg); animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
-    .modal2-lg { background: linear-gradient(135deg,#1E2030,#161824); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 28px; width: 95%; max-width: 860px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
-    .modal2-lg::-webkit-scrollbar { width: 6px; }
-    .modal2-lg::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-    @keyframes popIn { from { opacity: 0; transform: scale(.95) translateY(10px); } to { opacity: 1; transform: none; } }
-    .modal2-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 18px; color: #fff; }
-    .modal2-foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; border-top: 1px solid rgba(255,255,255,.06); padding-top: 20px; }
-
-    /* ── FORM ELEMENTS ─────────────────────────────────── */
-    .fg2 { display: flex; flex-direction: column; gap: 6px; }
-    .fg2 label { font-size: 12px; font-weight: 600; color: #94A3B8; letter-spacing: .04em; text-transform: uppercase; }
-    .inp2, .sel2, .ta2 {
-      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
-      border-radius: 10px; padding: 11px 14px; font-size: 14px; color: #fff;
-      font-family: var(--jk); outline: none; transition: all .2s;
-      width: 100%;
-    }
-    .inp2:focus, .sel2:focus, .ta2:focus { border-color: var(--accent); background: var(--accent-dim); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
-    .ta2 { resize: vertical; min-height: 72px; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-
-    /* ── QED ─────────────────────────────────── */
-    .qed2 { display: flex; flex-direction: column; gap: 14px; }
-    .qed-item2 { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06); border-radius: var(--r); padding: 18px; }
-    .qed-hdr2 { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-    .qed-num2 { font-family: var(--mono); font-size: 11px; font-weight: 700; background: var(--accent-dim); color: var(--accent-light); padding: 4px 10px; border-radius: 8px; }
-    .qed-opts2 { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-    .qed-opt2 { display: flex; align-items: center; gap: 10px; }
-    .qed-opt2 input[type="radio"] { accent-color: var(--accent); width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
-    .opt-lbl2 { font-size: 12px; color: #64748B; width: 20px; flex-shrink: 0; font-family: var(--mono); font-weight: 600; }
-    .correct-hint2 { font-size: 12px; color: var(--green); margin-top: 8px; background: var(--green-dim); padding: 6px 12px; border-radius: 8px; }
-
-    /* ── DIVIDER ─────────────────────────────────── */
-    .divider2 { height: 1px; background: rgba(255,255,255,.06); margin: 22px 0; }
-
-    /* ── STUDENT DETAIL PANEL ─────────────────────────────────── */
-    .student-detail { position: fixed; top: var(--top-h); right: 0; bottom: 0; width: 380px; background: linear-gradient(135deg,#1E2030,#161824); border-left: 1px solid rgba(255,255,255,.08); padding: 24px; overflow-y: auto; z-index: 150; transform: translateX(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); }
-    .student-detail.open { transform: none; }
-    .sd-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,.06); border: none; color: #94A3B8; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
-    .sd-close:hover { background: rgba(255,255,255,.12); color: #fff; }
-    .sd-close svg { width: 18px; height: 18px; }
-
-    /* ── SCROLLBAR ─────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.15); }
-
-    /* ── EMPTY ─────────────────────────────────── */
-    .empty-state { text-align: center; padding: 60px 24px; color: #475569; }
-    .empty-icon2 { font-size: 48px; margin-bottom: 16px; opacity: .4; }
-    .empty-state h3 { font-size: 17px; font-weight: 700; color: #64748B; margin-bottom: 8px; }
-    .empty-state p { font-size: 14px; }
-
-    /* ── LIVE SEARCH HIGHLIGHT ─────────────────────────────────── */
-    mark.hl { background: var(--accent-dim); color: var(--accent-light); border-radius: 3px; padding: 0 3px; }
-
-    /* ── TREND INDICATORS ─────────────────────────────────── */
-    .trend { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
-    .trend.up { color: var(--green); }
-    .trend.down { color: var(--red); }
-    .trend svg { width: 14px; height: 14px; }
-
-    /* ── GRADIENT ACCENTS ─────────────────────────────────── */
-    .gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .glow-accent { position: relative; }
-    .glow-accent::after { content: ''; position: absolute; inset: -2px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: inherit; opacity: 0; z-index: -1; filter: blur(12px); transition: opacity .3s; }
-    .glow-accent:hover::after { opacity: 0.3; }
-
-    /* ── MOBILE NAV ─────────────────────────────────── */
-    .mobile-nav {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(135deg, rgba(15,17,35,.98), rgba(20,22,38,.98));
-      border-top: 1px solid rgba(255,255,255,.08);
-      padding: 8px 16px;
-      padding-bottom: max(8px, env(safe-area-inset-bottom));
-      z-index: 300;
-      box-shadow: 0 -4px 20px rgba(0,0,0,.3);
-    }
-    .mobile-nav-items {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-    .mobile-nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 8px 12px;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all .2s;
-      border: none;
-      background: none;
-      color: #64748B;
-      font-family: var(--jk);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-    }
-    .mobile-nav-item svg { width: 22px; height: 22px; }
-    .mobile-nav-item:hover { color: #CBD5E1; }
-    .mobile-nav-item.active { color: var(--accent-light); }
-    .mobile-nav-item .nav-badge {
-      position: absolute;
-      top: 2px;
-      right: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-size: 9px;
-      padding: 1px 5px;
-      border-radius: 10px;
-      font-weight: 700;
-    }
-    .mobile-nav-item { position: relative; }
-
-    .mobile-header {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 56px;
-      background: rgba(15,17,35,.95);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      padding: 0 16px;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 200;
-    }
-    .mobile-header-brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #fff; text-decoration: none; }
-    .mobile-header-logo { width: 32px; height: 32px; background: linear-gradient(135deg,#6366F1,#22D3EE); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-    .mobile-header-logo svg { width: 18px; height: 18px; color: #fff; }
-    .mobile-header-actions { display: flex; align-items: center; gap: 8px; }
-    .mobile-header-btn { background: rgba(255,255,255,.06); border: none; color: #94A3B8; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    .mobile-header-btn svg { width: 18px; height: 18px; }
-
-    /* ── RESPONSIVE ─────────────────────────────────── */
-    @media(max-width: 900px) {
-      :root { --sidebar-w: 0px; --top-h: 56px; }
-      .sidebar { display: none; }
-      .topbar { display: none; }
-      .mobile-header { display: flex; }
-      .mobile-nav { display: block; }
-      .main { 
-        margin-left: 0; 
-        margin-top: 56px; 
-        margin-bottom: 80px;
-        padding: 16px; 
-      }
-      .stats-row { 
-        grid-template-columns: repeat(3, 1fr); 
-        gap: 10px;
-        margin-bottom: 20px;
-      }
-      .stat-card { padding: 14px; }
-      .stat-icon { width: 36px; height: 36px; margin-bottom: 10px; }
-      .stat-icon svg { width: 18px; height: 18px; }
-      .stat-v { font-size: 22px; }
-      .stat-l { font-size: 10px; }
-      .ph { flex-direction: column; gap: 12px; }
-      .ph-title { font-size: 20px; }
-      .ph .btn2 { width: 100%; justify-content: center; }
-      .filter-bar { flex-direction: column; }
-      .search-wrap { width: 100%; }
-      .filter-select { width: 100%; }
-      .filter-count { width: 100%; text-align: center; margin-top: 8px; }
-      .quiz-grid { grid-template-columns: 1fr; gap: 12px; }
-      .card { padding: 16px; }
-      .ov-grid { grid-template-columns: 1fr; gap: 16px; }
-      .row2, .row3 { grid-template-columns: 1fr; gap: 12px; }
-      .qc-chips { gap: 6px; }
-      .chip2 { font-size: 11px; padding: 4px 8px; }
-      .qc-footer { flex-wrap: wrap; }
-      .qc-footer .btn2 { flex: 1; justify-content: center; }
-      .tbl-wrap { margin: 0 -16px; padding: 0 16px; }
-      .results-table { font-size: 12px; }
-      .results-table thead th, .results-table tbody td { padding: 10px 8px; }
-      .student-detail { width: 100%; }
-    }
-    @media(max-width: 600px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .stat-card { padding: 12px; }
-      .stat-v { font-size: 20px; }
-      .modal2, .modal2-lg { padding: 20px; margin: 10px; width: calc(100% - 20px); max-height: 85vh; }
-      .modal2-lg { max-width: 100%; }
-      .modal2-title { font-size: 16px; }
-      .modal2-foot { flex-direction: column; }
-      .modal2-foot .btn2 { width: 100%; justify-content: center; }
-      .tb-right { display: none; }
-    }
-    @media(max-width: 480px) {
-      .stats-row { grid-template-columns: 1fr 1fr; }
-      .stat-card { padding: 14px; }
-      .stat-v { font-size: 24px; }
-      .stat-icon { width: 40px; height: 40px; }
-      .stat-icon svg { width: 20px; height: 20px; }
-      .ph-title { font-size: 18px; }
-      .card-title { font-size: 13px; }
-      .qc-title2 { font-size: 14px; }
-      .empty-state { padding: 40px 16px; }
-      .empty-icon2 { font-size: 36px; }
-    }
+    :root { --jk:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace; --accent:#6366F1; --accent-light:#818CF8; --accent-dim:rgba(99,102,241,.15); --green:#34D399; --green-dim:rgba(52,211,153,.15); --amber:#FBBF24; --purple:#A78BFA; --red:#F87171; --sidebar-w:240px; --top-h:60px; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:var(--jk); background:#0F1123; color:#E2E8F0; min-height:100vh; }
+    .topbar { position:fixed; top:0; left:0; right:0; height:var(--top-h); background:rgba(15,17,35,.9); border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; padding:0 20px; gap:12px; z-index:200; }
+    .tb-brand { font-weight:800; color:#fff; text-decoration:none; font-size:17px; }
+    .tb-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+    .tb-email { font-size:13px; color:#94A3B8; font-family:var(--mono); }
+    .sidebar { position:fixed; top:var(--top-h); left:0; bottom:0; width:var(--sidebar-w); background:rgba(15,17,35,.95); border-right:1px solid rgba(255,255,255,.05); padding:20px 12px; display:flex; flex-direction:column; gap:4px; overflow-y:auto; }
+    .sb-section { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.25); padding:14px 12px 6px; }
+    .sb-item { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:10px; cursor:pointer; font-size:14px; font-weight:500; color:#64748B; background:none; border:none; width:100%; text-align:left; font-family:var(--jk); text-decoration:none; }
+    .sb-item:hover { background:rgba(255,255,255,.04); color:#CBD5E1; }
+    .sb-item.active { background:var(--accent-dim); color:var(--accent-light); }
+    .sb-badge { margin-left:auto; background:var(--green-dim); color:var(--green); font-size:11px; font-weight:700; padding:3px 8px; border-radius:50px; }
+    .main { margin-left:var(--sidebar-w); margin-top:var(--top-h); padding:28px 28px 60px; }
+    .ph-title { font-size:24px; font-weight:800; margin-bottom:4px; }
+    .ph-sub { font-size:14px; color:#64748B; margin-bottom:24px; }
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
+    .stat-card { background:linear-gradient(135deg,rgba(30,32,48,.9),rgba(20,22,38,.95)); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:18px; }
+    .stat-v { font-size:28px; font-weight:800; margin-bottom:4px; }
+    .stat-l { font-size:11px; color:#64748B; text-transform:uppercase; letter-spacing:.05em; }
+    .card { background:linear-gradient(135deg,rgba(30,32,48,.9),rgba(20,22,38,.95)); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:20px; }
+    .filter-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+    .search-input { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 14px; font-size:14px; color:#fff; font-family:var(--jk); outline:none; min-width:220px; }
+    .filter-select { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 14px; font-size:13px; color:#CBD5E1; font-family:var(--jk); }
+    .btn2 { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; padding:9px 16px; border-radius:10px; border:none; cursor:pointer; font-family:var(--jk); }
+    .btn2-ghost { background:rgba(255,255,255,.05); color:#94A3B8; border:1px solid rgba(255,255,255,.08); }
+    .btn2-ghost:hover { background:rgba(255,255,255,.1); color:#fff; }
+    .btn2-primary { background:linear-gradient(135deg,#6366F1,#4F46E5); color:#fff; }
+    table.tbl2 { width:100%; border-collapse:separate; border-spacing:0 6px; }
+    .tbl2 th { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#475569; padding:8px 14px; text-align:left; }
+    .tbl2 td { padding:12px 14px; font-size:14px; background:rgba(255,255,255,.02); }
+    .tbl2 tr:hover td { background:var(--accent-dim); }
+    .tbl2 td:first-child { border-radius:10px 0 0 10px; }
+    .tbl2 td:last-child { border-radius:0 10px 10px 0; }
+    .badge2 { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:50px; }
+    .badge2.green { background:var(--green-dim); color:var(--green); }
+    .badge2.gray { background:rgba(255,255,255,.06); color:#94A3B8; }
+    .badge2.purple { background:rgba(167,139,250,.12); color:var(--purple); }
+    .badge2.blue { background:rgba(34,211,238,.12); color:#22D3EE; }
+    .page { display:none; }
+    .page.active { display:block; }
+    @media(max-width:800px) { .sidebar { display:none; } .main { margin-left:0; } .stats-row { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
-
-<!-- MOBILE HEADER -->
-<header class="mobile-header">
-  <a class="mobile-header-brand" href="/admin">
-    <div class="mobile-header-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-    </div>
-    KvizMajstor
-  </a>
-  <div class="mobile-header-actions">
-    <button class="mobile-header-btn" onclick="window.location.href='/create-quiz'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-    </button>
-    <button class="mobile-header-btn" id="mobile-logout-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </button>
-  </div>
-</header>
-
-<!-- MOBILE NAV -->
-<nav class="mobile-nav">
-  <div class="mobile-nav-items">
-    <button class="mobile-nav-item active" data-page="overview" onclick="switchPage(this); closeMobileNav();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Pregled
-    </button>
-    <button class="mobile-nav-item" data-page="quizzes" onclick="switchPage(this); closeMobileNav();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Kvizovi
-      <span class="nav-badge" id="mob-quiz-count">0</span>
-    </button>
-    <button class="mobile-nav-item" data-page="results" onclick="switchPage(this); closeMobileNav();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Rezultati
-    </button>
-    <button class="mobile-nav-item" data-page="students" onclick="switchPage(this); closeMobileNav();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Učenici
-    </button>
-    <button class="mobile-nav-item" data-page="materials" onclick="switchPage(this); closeMobileNav();">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      Literatura
-    </button>
-  </div>
-</nav>
-
-<!-- TOPBAR -->
 <nav class="topbar">
-  <a class="tb-brand" href="/admin">
-    <div class="tb-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-    </div>
-    KvizMajstor
-  </a>
+  <a class="tb-brand" href="/admin">📚 KvizMajstor</a>
   <div class="tb-right">
-    <span class="tb-pill">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      Admin
-    </span>
-    <span class="tb-email" id="nb-email"></span>
-    <button class="tb-btn" id="logout-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Odjava
-    </button>
+    <span class="tb-email" id="nb-email">—</span>
+    <button class="btn2 btn2-ghost" id="logout-btn">Odjava</button>
   </div>
 </nav>
 
-<!-- SIDEBAR -->
 <aside class="sidebar">
   <span class="sb-section">Navigacija</span>
-  <button class="sb-item active" data-page="overview" onclick="switchPage(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-    Pregled
+  <button class="sb-item" data-page="overview" onclick="switchPage(this)">Pregled</button>
+  <a class="sb-item" href="/create-quiz">+ Novi kviz</a>
+  <button class="sb-item active" data-page="presence" onclick="switchPage(this)">
+    Aktivnost <span class="sb-badge" id="sb-online-count">—</span>
   </button>
-  <button class="sb-item" data-page="quizzes" onclick="switchPage(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-    Kvizovi
-    <span class="sb-badge" id="sb-quiz-count">—</span>
-  </button>
-  <button class="sb-item" data-page="results" onclick="switchPage(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    Rezultati
-    <span class="sb-badge" id="sb-res-count">—</span>
-  </button>
-  <button class="sb-item" data-page="students" onclick="switchPage(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    Učenici
-    <span class="sb-badge" id="sb-stu-count">—</span>
-  </button>
-  <button class="sb-item" data-page="materials" onclick="switchPage(this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-    Literatura
-    <span class="sb-badge" id="sb-mat-count">—</span>
-  </button>
-  <div style="flex:1"></div>
-  <span class="sb-section">Akcije</span>
-  <a class="sb-item" href="/create-quiz">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-    Novi kviz
-  </a>
 </aside>
 
-<!-- MAIN -->
 <main class="main">
-
-  <!-- STATS -->
-  <div class="stats-row" id="stats-row">
-    <div class="stat-card" style="--glow:linear-gradient(135deg,rgba(99,102,241,.4),transparent)">
-      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(99,102,241,.05))">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <div class="stat-v" id="s-quizzes" style="color:#818CF8">—</div>
-      <div class="stat-l">Ukupno kvizova</div>
-    </div>
-    <div class="stat-card" style="--glow:linear-gradient(135deg,rgba(52,211,153,.4),transparent)">
-      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.05))">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      </div>
-      <div class="stat-v" id="s-active" style="color:#34D399">—</div>
-      <div class="stat-l">Aktivnih kvizova</div>
-    </div>
-    <div class="stat-card" style="--glow:linear-gradient(135deg,rgba(34,211,238,.4),transparent)">
-      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(34,211,238,.05))">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <div class="stat-v" id="s-students" style="color:#22D3EE">—</div>
-      <div class="stat-l">Učenika</div>
-    </div>
-    <div class="stat-card" style="--glow:linear-gradient(135deg,rgba(251,191,36,.4),transparent)">
-      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(251,191,36,.05))">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-      </div>
-      <div class="stat-v" id="s-results" style="color:#FBBF24">—</div>
-      <div class="stat-l">Predanih testova</div>
-    </div>
-    <div class="stat-card" style="--glow:linear-gradient(135deg,rgba(167,139,250,.4),transparent)">
-      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(167,139,250,.2),rgba(167,139,250,.05))">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      </div>
-      <div class="stat-v" id="s-avg" style="color:#A78BFA">—</div>
-      <div class="stat-l">Prosječan rezultat</div>
+  <div class="page" id="page-overview">
+    <div class="ph-title">Pregled</div>
+    <div class="ph-sub">Admin panel</div>
+    <div class="card">
+      <p style="color:#94A3B8;line-height:1.6;margin-bottom:16px">
+        Otvori <strong style="color:#fff">Aktivnost</strong> da vidiš ko je online i s koje IP adrese.
+        Za kreiranje kviza: <a href="/create-quiz" style="color:var(--accent-light)">Novi kviz</a>.
+      </p>
+      <button class="btn2 btn2-primary" onclick="document.querySelector('[data-page=presence]').click()">Otvori Aktivnost →</button>
     </div>
   </div>
 
-  <!-- PAGE: OVERVIEW -->
-  <div class="page active" id="page-overview">
-    <div class="ph">
-      <div><div class="ph-title">Pregled</div><div class="ph-sub">Brzi uvid u aktivnost platforme</div></div>
-    </div>
-    <div class="ov-grid">
-      <div class="card">
-        <div class="card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-          Posljednji rezultati
-        </div>
-        <div id="ov-results-wrap"></div>
-      </div>
+  <div class="page active" id="page-presence">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px">
       <div>
-        <div class="card" style="margin-bottom:18px">
-          <div class="card-title" style="margin-bottom:14px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Aktivni kvizovi
-          </div>
-          <div id="ov-active-list"></div>
-        </div>
-        <div class="card">
-          <div class="card-title" style="margin-bottom:14px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-            Top učenici
-          </div>
-          <div id="ov-top-students"></div>
-        </div>
+        <div class="ph-title">Aktivnost korisnika</div>
+        <div class="ph-sub">Ko je online, s koje IP adrese i na kojoj stranici (zadnjih 5 min = online)</div>
       </div>
+      <button class="btn2 btn2-ghost" onclick="loadPresence()">↻ Osvježi</button>
     </div>
-  </div>
 
-  <!-- PAGE: QUIZZES -->
-  <div class="page" id="page-quizzes">
-    <div class="ph">
-      <div><div class="ph-title">Kvizovi</div><div class="ph-sub">Upravljanje svim kvizovima</div></div>
-      <a href="/create-quiz" class="btn2 btn2-primary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Novi kviz
-      </a>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-v" id="pres-online" style="color:var(--green)">—</div><div class="stat-l">Online sada</div></div>
+      <div class="stat-card"><div class="stat-v" id="pres-tracked" style="color:var(--accent-light)">—</div><div class="stat-l">Ukupno praćeno</div></div>
+      <div class="stat-card"><div class="stat-v" id="pres-updated" style="color:var(--amber);font-size:16px">—</div><div class="stat-l">Zadnji osvježaj</div></div>
     </div>
-    <div class="filter-bar" style="margin-bottom:22px">
-      <div class="search-wrap">
-        <span class="search-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </span>
-        <input class="search-input" id="q-search" placeholder="Pretraži kvizove..." oninput="filterQuizzes()"/>
-      </div>
-      <select class="filter-select" id="q-status" onchange="filterQuizzes()">
-        <option value="">Svi statusi</option>
-        <option value="active">Aktivni</option>
-        <option value="inactive">Neaktivni</option>
-      </select>
-      <select class="filter-select" id="q-difficulty" onchange="filterQuizzes()">
-        <option value="">Sve težine</option>
-        <option value="lako">Lako</option>
-        <option value="srednje">Srednje</option>
-        <option value="teško">Teško</option>
-      </select>
-      <select class="filter-select" id="q-subject" onchange="filterQuizzes()">
-        <option value="">Svi predmeti</option>
-      </select>
-      <span class="filter-count" id="q-count"></span>
-    </div>
-    <div class="quiz-grid" id="quizzes-grid"></div>
-  </div>
 
-  <!-- PAGE: RESULTS -->
-  <div class="page" id="page-results">
-    <div class="ph">
-      <div><div class="ph-title">Rezultati</div><div class="ph-sub">Svi predani testovi i kvizovi</div></div>
-      <button class="btn2 btn2-ghost" id="export-results-btn" onclick="exportResultsCSV()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Izvezi CSV
-      </button>
-    </div>
     <div class="card">
       <div class="filter-bar">
-        <div class="search-wrap">
-          <span class="search-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </span>
-          <input class="search-input" id="r-search" placeholder="Pretraži učenika ili kviz..." oninput="filterResults()"/>
-        </div>
-        <select class="filter-select" id="r-razred" onchange="filterResults()"><option value="">Svi razredi</option></select>
-        <select class="filter-select" id="r-predmet" onchange="filterResults()"><option value="">Svi predmeti</option></select>
-        <select class="filter-select" id="r-grade" onchange="filterResults()">
-          <option value="">Sve ocjene</option>
-          <option value="5">Odličan (5)</option>
-          <option value="4">Vrlo dobar (4)</option>
-          <option value="3">Dobar (3)</option>
-          <option value="2">Dovoljan (2)</option>
-          <option value="1">Nedovoljan (1)</option>
+        <input class="search-input" id="pres-search" placeholder="Ime, email, IP..." oninput="filterPresence()"/>
+        <select class="filter-select" id="pres-filter" onchange="filterPresence()">
+          <option value="all">Svi</option>
+          <option value="online">Samo online</option>
+          <option value="admin">Samo admini</option>
+          <option value="student">Samo učenici</option>
         </select>
-        <select class="filter-select" id="r-sort" onchange="filterResults()">
-          <option value="date-desc">Najnoviji</option>
-          <option value="date-asc">Najstariji</option>
-          <option value="pct-desc">Najbolji</option>
-          <option value="pct-asc">Najlošiji</option>
-        </select>
-        <span class="filter-count" id="r-count"></span>
+        <span style="font-size:13px;color:#64748B;margin-left:auto" id="pres-count">—</span>
       </div>
-      <div class="tbl-wrap" id="results-wrap"></div>
+      <div style="overflow-x:auto">
+        <table class="tbl2">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Korisnik</th>
+              <th>Uloga</th>
+              <th>Razred</th>
+              <th>IP adresa</th>
+              <th>Stranica</th>
+              <th>Zadnja aktivnost</th>
+            </tr>
+          </thead>
+          <tbody id="pres-tbody">
+            <tr><td colspan="7" style="text-align:center;color:#64748B;padding:28px">Učitavanje…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
-
-  <!-- PAGE: STUDENTS -->
-  <div class="page" id="page-students">
-    <div class="ph">
-      <div>
-        <div class="ph-title">Učenici</div>
-        <div class="ph-sub" id="stu-sub">Svi registrovani učenici</div>
-      </div>
-      <button class="btn2 btn2-ghost" onclick="exportStudentsCSV()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Izvezi CSV
-      </button>
-    </div>
-    <div class="card">
-      <div class="filter-bar">
-        <div class="search-wrap" style="max-width:320px">
-          <span class="search-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </span>
-          <input class="search-input" id="s-search" placeholder="Ime, email ili razred..." oninput="filterStudents()"/>
-        </div>
-        <select class="filter-select" id="s-razred" onchange="filterStudents()"><option value="">Svi razredi</option></select>
-        <select class="filter-select" id="s-smjer" onchange="filterStudents()"><option value="">Svi smjerovi</option></select>
-        <select class="filter-select" id="s-sort" onchange="filterStudents()">
-          <option value="name">Po imenu</option>
-          <option value="razred">Po razredu</option>
-          <option value="results-desc">Najviše kvizova</option>
-          <option value="grade-desc">Prosječna ocjena</option>
-        </select>
-        <span class="filter-count" id="s-count"></span>
-      </div>
-      <div class="tbl-wrap" id="students-wrap"></div>
-    </div>
-  </div>
-
-  <!-- PAGE: MATERIALS (LITERATURA) -->
-  <div class="page" id="page-materials">
-    <div class="ph">
-      <div>
-        <div class="ph-title">Literatura</div>
-        <div class="ph-sub">Materijali (PDF, Word, PPT) koje učenici mogu čitati i preuzeti</div>
-      </div>
-      <button class="btn2 btn2-primary" onclick="openMaterialModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Dodaj materijal
-      </button>
-    </div>
-    <div id="store-banner" style="margin-bottom:16px"></div>
-    <div class="card">
-      <div class="filter-bar">
-        <div class="search-wrap" style="max-width:320px">
-          <span class="search-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </span>
-          <input class="search-input" id="m-search" placeholder="Naziv, predmet ili fajl..." oninput="filterMaterials()"/>
-        </div>
-        <select class="filter-select" id="m-predmet" onchange="filterMaterials()"><option value="">Svi predmeti</option></select>
-        <select class="filter-select" id="m-razred" onchange="filterMaterials()"><option value="">Svi razredi</option></select>
-        <span class="filter-count" id="m-count"></span>
-      </div>
-      <div class="tbl-wrap" id="materials-wrap"></div>
-    </div>
-  </div>
-
 </main>
-
-<!-- MATERIAL MODAL -->
-<div class="modal-bg" id="material-modal" style="display:none">
-  <div class="modal2-lg">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
-      <div class="modal2-title" id="mm-title" style="margin:0">Dodaj materijal</div>
-      <button class="btn2 btn2-ghost btn2-sm" onclick="closeMaterialModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Zatvori
-      </button>
-    </div>
-    <div class="row2" style="margin-bottom:16px">
-      <div class="fg2"><label>Naziv materijala</label><input class="inp2" id="mm-name" placeholder="npr. Skripta — Baze podataka"/></div>
-      <div class="fg2"><label>Predmet</label><input class="inp2" id="mm-subject" list="mm-subject-list" placeholder="npr. Informatika"/><datalist id="mm-subject-list"></datalist></div>
-    </div>
-    <div class="fg2" style="margin-bottom:16px">
-      <label>Opis (opcionalno)</label><textarea class="ta2" id="mm-desc" placeholder="Kratak opis šta materijal pokriva"></textarea>
-    </div>
-    <div class="fg2" style="margin-bottom:16px">
-      <label>Razredi koji vide materijal</label>
-      <div id="mm-razredi" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
-      <div style="font-size:11.5px;color:#64748B;margin-top:6px">Ako ne odabereš nijedan razred, materijal vide svi učenici.</div>
-      <div id="mm-vis" style="font-size:12px;font-weight:600;margin-top:6px"></div>
-    </div>
-    <div class="fg2" id="mm-file-fld" style="margin-bottom:8px">
-      <label>Fajl — PDF, DOC, DOCX, PPT, PPTX, TXT (max <span id="mm-max">20</span> MB)</label>
-      <input class="inp2" type="file" id="mm-file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"/>
-      <div style="font-size:11.5px;color:#64748B;margin-top:6px" id="mm-store-note">
-        Fajl se uplouduje direktno na Google Drive — ne moraš ništa ručno stavljati na Drive.
-      </div>
-    </div>
-    <div class="fg2" style="margin-bottom:8px">
-      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="mm-share" checked/>
-        Napravi javni link (radi i bez prijave na stranicu)
-      </label>
-      <div style="font-size:11.5px;color:#64748B;margin-top:6px">
-        Link izgleda kao <code style="font-family:monospace">/m/ab12…</code> i vodi direktno na fajl.
-        Isključi ako materijal smiju vidjeti samo prijavljeni učenici.
-      </div>
-    </div>
-    <div class="modal2-foot">
-      <button class="btn2 btn2-ghost" onclick="closeMaterialModal()">Odustani</button>
-      <button class="btn2 btn2-primary" id="mm-save" onclick="saveMaterial()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Sačuvaj
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- STUDENT DETAIL PANEL -->
-<aside class="student-detail" id="student-detail">
-  <button class="sd-close" onclick="closeStudentDetail()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
-  <div id="sd-content"></div>
-</aside>
-
-<!-- CONFIRM MODAL -->
-<div class="modal-bg" id="modal" style="display:none" onclick="e=>{if(e.target===this)closeModal()}">
-  <div class="modal2">
-    <div class="modal2-title" id="modal-title">Potvrda</div>
-    <div id="modal-body" style="font-size:14px;color:#94A3B8;line-height:1.6"></div>
-    <div class="modal2-foot">
-      <button class="btn2 btn2-ghost" onclick="closeModal()">Odustani</button>
-      <button class="btn2 btn2-danger" id="modal-confirm">Potvrdi</button>
-    </div>
-  </div>
-</div>
-
-<!-- EDIT STUDENT MODAL -->
-<div class="modal-bg" id="edit-student-modal" style="display:none">
-  <div class="modal2">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div class="modal2-title" style="margin:0;display:flex;align-items:center;gap:10px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Uredi učenika
-      </div>
-      <button class="btn2 btn2-ghost btn2-sm" onclick="closeEditStudentModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Zatvori
-      </button>
-    </div>
-
-    <div id="es-avatar-wrap" style="text-align:center;margin-bottom:18px"></div>
-
-    <div class="fg2" style="margin-bottom:14px">
-      <label>Ime i prezime</label>
-      <input class="inp2" id="es-name" placeholder="Ime i prezime"/>
-    </div>
-    <div class="fg2" style="margin-bottom:14px">
-      <label>Email</label>
-      <input class="inp2" id="es-email" disabled style="opacity:.6"/>
-    </div>
-    <div class="row2" style="margin-bottom:14px">
-      <div class="fg2">
-        <label>Razred</label>
-        <select class="sel2" id="es-razred">
-          <option value="">— Odaberi razred —</option>
-          <option value="I-T5">I-T5</option>
-          <option value="II-S2">II-S2</option>
-          <option value="II-P">II-P</option>
-          <option value="III-S1">III-S1</option>
-          <option value="III-T3">III-T3</option>
-          <option value="III-T5">III-T5</option>
-          <option value="III-T6">III-T6</option>
-          <option value="IV-T3">IV-T3</option>
-          <option value="IV-T5">IV-T5</option>
-        </select>
-      </div>
-      <div class="fg2">
-        <label>Smjer / Profil</label>
-        <input class="inp2" id="es-smjer" placeholder="Npr. Elektrotehničar"/>
-      </div>
-    </div>
-
-    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:12px 14px;margin-bottom:4px;display:flex;gap:10px;align-items:flex-start">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      <span style="font-size:12.5px;color:#94A3B8;line-height:1.5">Ovdje možeš ispraviti razred ako je učenik pogrešno odabrao pri registraciji. Promjena će odmah biti vidljiva u svim prikazima i rezultatima.</span>
-    </div>
-
-    <div class="modal2-foot">
-      <button class="btn2 btn2-ghost" onclick="closeEditStudentModal()">Odustani</button>
-      <button class="btn2 btn2-primary" id="es-save-btn" onclick="saveStudentEdit()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Sačuvaj izmjene
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- EDIT QUIZ MODAL -->
-<div class="modal-bg" id="edit-modal" style="display:none">
-  <div class="modal2-lg">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
-      <div class="modal2-title" style="margin:0;display:flex;align-items:center;gap:10px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Uredi kviz
-      </div>
-      <button class="btn2 btn2-ghost btn2-sm" onclick="closeEditModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Zatvori
-      </button>
-    </div>
-    <div class="row2" style="margin-bottom:16px">
-      <div class="fg2"><label>Naziv kviza</label><input class="inp2" id="eq-title" placeholder="Naziv kviza"/></div>
-      <div class="fg2"><label>Predmet</label><input class="inp2" id="eq-subject" placeholder="Npr. Autoelektrika"/></div>
-    </div>
-    <div class="fg2" style="margin-bottom:16px">
-      <label>Opis</label><input class="inp2" id="eq-desc" placeholder="Kratki opis kviza"/>
-    </div>
-    <div class="row3" style="margin-bottom:16px">
-      <div class="fg2">
-        <label>Težina</label>
-        <select class="sel2" id="eq-difficulty">
-          <option value="lako">Lako</option>
-          <option value="srednje">Srednje</option>
-          <option value="teško">Teško</option>
-        </select>
-      </div>
-      <div class="fg2"><label>Vremenski limit (min)</label><input class="inp2" id="eq-time" type="number" min="5" max="120"/></div>
-      <div class="fg2"><label>Tema / modul</label><input class="inp2" id="eq-topic" placeholder="Tema"/></div>
-    </div>
-    <div class="fg2" style="margin-bottom:16px">
-      <label>Pregled rezultata</label>
-      <select class="sel2" id="eq-showresults">
-        <option value="always">Uvijek vidljivo</option>
-        <option value="never">Nikad</option>
-        <option value="after_close">Samo kad je kviz neaktivan</option>
-      </select>
-    </div>
-    <div class="divider2"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:700;color:#fff">Pitanja</div>
-      <button class="btn2 btn2-success btn2-sm" onclick="addQuestion()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Dodaj pitanje
-      </button>
-    </div>
-    <div class="qed2" id="eq-questions"></div>
-    <div class="modal2-foot">
-      <button class="btn2 btn2-ghost" onclick="closeEditModal()">Odustani</button>
-      <button class="btn2 btn2-primary" id="eq-save-btn" onclick="saveQuiz()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Sačuvaj izmjene
-      </button>
-    </div>
-  </div>
-</div>
 
 <script type="module">
 import { auth, db } from '/js/firebase-config.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { toast, gradeBadge, fmtDate, pctColor, btnLoad, btnReset } from '/js/utils.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { startPresence } from '/js/presence.js';
 
-let quizzes=[], results=[], users=[], allResults=[], allStudents=[];
-let editingQuiz = null;
-let editingStudentId = null;
-const ALL_RAZREDI = ["I-T5","II-S2","II-P","III-S1","III-T3","III-T5","III-T6","IV-T3","IV-T5"];
+let presenceUsers = [];
+let presenceTimer = null;
 
 onAuthStateChanged(auth, async (u) => {
-  if (!u) { window.location.href='/login'; return; }
-  const snap = await getDoc(doc(db,'users',u.uid));
-  if (snap.data()?.role !== 'admin') { window.location.href='/student'; return; }
+  if (!u) { location.href = '/login'; return; }
+  const snap = await getDoc(doc(db, 'users', u.uid));
+  if (snap.data()?.role !== 'admin') { location.href = '/student'; return; }
   document.getElementById('nb-email').textContent = u.email;
-  await loadAll();
+  startPresence('/admin');
+  loadPresence();
+  presenceTimer = setInterval(() => {
+    const page = document.getElementById('page-presence');
+    if (page && page.classList.contains('active')) loadPresence(true);
+  }, 30000);
 });
 
-document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
-document.getElementById('modal').onclick = (e) => { if(e.target===document.getElementById('modal')) closeModal(); };
-document.getElementById('edit-modal').onclick = (e) => { if(e.target===document.getElementById('edit-modal')) closeEditModal(); };
-document.getElementById('edit-student-modal').onclick = (e) => { if(e.target===document.getElementById('edit-student-modal')) closeEditStudentModal(); };
-document.getElementById('mobile-logout-btn').onclick = () => signOut(auth).then(()=>window.location.href='/login');
+document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.href = '/login');
 
-function closeMobileNav() {}
-
-// Page switching
 window.switchPage = (btn) => {
-  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  const pg = btn.dataset.page;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+pg).classList.add('active');
-  document.getElementById('student-detail').classList.remove('open');
-};
-
-async function loadAll() {
-  try {
-    const [qs,rs,us] = await Promise.all([
-      getDocs(query(collection(db,'quizzes'), orderBy('createdAt','desc'))),
-      getDocs(query(collection(db,'results'),  orderBy('completedAt','desc'))),
-      getDocs(collection(db,'users'))
-    ]);
-    quizzes = qs.docs.map(d=>({id:d.id,...d.data()}));
-    results = rs.docs.map(d=>({id:d.id,...d.data()}));
-    users   = us.docs.map(d=>({id:d.id,...d.data()}));
-    allResults  = [...results];
-    allStudents = users.filter(u=>u.role==='student');
-    populateFilters();
-    renderStats();
-    renderOverview();
-    renderQuizzes();
-    filterResults();
-    filterStudents();
-    loadMaterials();
-  } catch(e) { toast('Greška: '+e.message,'error'); }
-}
-
-function populateFilters() {
-  const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
-  const razredi  = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
-  const smjerovi = [...new Set(allStudents.map(s=>s.smjer).filter(Boolean))].sort();
-  const predmeti = [...new Set(quizzes.map(q=>q.subject).filter(Boolean))].sort();
-
-  ['r-razred','s-razred'].forEach(id => {
-    const el=document.getElementById(id); while(el.options.length>1)el.remove(1);
-    razredi.forEach(r=>{const o=new Option(r,r);el.appendChild(o);});
-  });
-
-  // Also populate razred in edit-student modal if extra razredi appeared
-  const esSel = document.getElementById('es-razred');
-  if (esSel) {
-    const existingVals = [...esSel.options].map(o=>o.value);
-    razredi.forEach(r=>{
-      if (!existingVals.includes(r)) esSel.appendChild(new Option(r,r));
-    });
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  if (btn.dataset && btn.dataset.page) {
+    btn.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const el = document.getElementById('page-' + btn.dataset.page);
+    if (el) el.classList.add('active');
+    if (btn.dataset.page === 'presence') loadPresence();
   }
-  const sm=document.getElementById('s-smjer'); while(sm.options.length>1)sm.remove(1);
-  smjerovi.forEach(s=>{sm.appendChild(new Option(s,s));});
-  const pd=document.getElementById('r-predmet'); while(pd.options.length>1)pd.remove(1);
-  predmeti.forEach(p=>{pd.appendChild(new Option(p,p));});
-  const qs=document.getElementById('q-subject'); while(qs.options.length>1)qs.remove(1);
-  predmeti.forEach(p=>{qs.appendChild(new Option(p,p));});
-}
-
-function renderStats() {
-  const avg = results.length ? Math.round(results.reduce((s,r)=>s+(r.percentage||0),0)/results.length) : 0;
-  document.getElementById('s-quizzes').textContent  = quizzes.length;
-  document.getElementById('s-active').textContent   = quizzes.filter(q=>q.status==='active').length;
-  document.getElementById('s-students').textContent = allStudents.length;
-  document.getElementById('s-results').textContent  = results.length;
-  document.getElementById('s-avg').textContent      = avg+'%';
-  document.getElementById('sb-quiz-count').textContent = quizzes.length;
-  document.getElementById('sb-res-count').textContent  = results.length;
-  document.getElementById('sb-stu-count').textContent  = allStudents.length;
-  // Mobile badges
-  const mobBadge = document.getElementById('mob-quiz-count');
-  if (mobBadge) mobBadge.textContent = quizzes.length;
-}
-
-function renderOverview() {
-  const rEl = document.getElementById('ov-results-wrap');
-  if (!results.length) { rEl.innerHTML='<div class="empty-state"><div class="empty-icon2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></div><p>Nema rezultata</p></div>'; }
-  else rEl.innerHTML = `<div class="tbl-wrap"><table class="tbl2">
-    <thead><tr><th>Učenik</th><th>Razred</th><th>Kviz</th><th>Rezultat</th><th>Ocjena</th><th>Datum</th></tr></thead>
-    <tbody>${results.slice(0,10).map(r=>`<tr>
-      <td><div style="display:flex;align-items:center;gap:10px">
-        <div class="avatar" style="background:var(--accent-dim);color:var(--accent-light)">${(r.studentName||'?')[0].toUpperCase()}</div>
-        <span style="font-weight:600;color:#fff">${r.studentName}</span>
-      </div></td>
-      <td><span class="badge2 blue">${r.razred||'—'}</span></td>
-      <td style="color:#94A3B8;font-size:13px">${r.quizTitle}</td>
-      <td>${renderPctBar(r.percentage)}</td>
-      <td>${renderGrade(r.grade,r.gradeLabel)}</td>
-      <td style="color:#475569;font-size:12px;font-family:var(--mono)">${fmtDate(r.completedAt)}</td>
-    </tr>`).join('')}</tbody>
-  </table></div>`;
-
-  const aEl = document.getElementById('ov-active-list');
-  const active = quizzes.filter(q=>q.status==='active');
-  aEl.innerHTML = !active.length
-    ? '<p style="color:#475569;font-size:13px;padding:10px 0">Nema aktivnih kvizova</p>'
-    : active.map(q=>`<div class="act-item">
-        <div class="act-info">
-          <div class="act-name">${q.title}</div>
-          <div class="act-sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${q.timeLimit||'?'} min · ${q.difficulty}</div>
-        </div>
-        <span class="badge2 green"><svg viewBox="0 0 24 24" fill="currentColor" width="6" height="6"><circle cx="12" cy="12" r="6"/></svg> Aktivan</span>
-      </div>`).join('');
-
-  const topEl = document.getElementById('ov-top-students');
-  const scored = allStudents.map(s=>{
-    const sr=results.filter(r=>r.userId===s.id);
-    const avg=sr.length?sr.reduce((sum,r)=>sum+r.grade,0)/sr.length:0;
-    return {...s,avgGrade:avg,quizCount:sr.length};
-  }).filter(s=>s.quizCount>0).sort((a,b)=>b.avgGrade-a.avgGrade).slice(0,5);
-  topEl.innerHTML = !scored.length
-    ? '<p style="color:#475569;font-size:13px;padding:10px 0">Nema podataka</p>'
-    : scored.map((s,i)=>`<div class="act-item">
-        <div class="act-info">
-          <div class="act-name" style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;color:#475569;font-family:var(--mono);width:20px">#${i+1}</span>
-            ${s.displayName||'—'}
-          </div>
-          <div class="act-sub">${s.razred||'—'} · ${s.quizCount} kvizova</div>
-        </div>
-        <div class="act-meta">
-          <div style="font-size:18px;font-weight:800;color:${s.avgGrade>=4.5?'#FBBF24':s.avgGrade>=3.5?'#34D399':'#94A3B8'}">${s.avgGrade.toFixed(1)}</div>
-          <div style="font-size:10px;color:#475569">prosj.</div>
-        </div>
-      </div>`).join('');
-}
-
-// ── QUIZZES ──
-window.filterQuizzes = () => {
-  const search = document.getElementById('q-search').value.toLowerCase();
-  const status = document.getElementById('q-status').value;
-  const diff   = document.getElementById('q-difficulty').value;
-  const subj   = document.getElementById('q-subject').value;
-
-  let f = quizzes.filter(q=>{
-    if (search && !q.title?.toLowerCase().includes(search) && !q.subject?.toLowerCase().includes(search)) return false;
-    if (status && q.status !== status) return false;
-    if (diff   && q.difficulty !== diff) return false;
-    if (subj   && q.subject !== subj) return false;
-    return true;
-  });
-  document.getElementById('q-count').textContent = `${f.length} kvizova`;
-  renderQuizzes(f);
 };
-
-function renderQuizzes(list) {
-  list = list ?? quizzes;
-  const grid = document.getElementById('quizzes-grid');
-  if (!list.length) {
-    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><h3>Nema kvizova</h3><p>Kreirajte prvi kviz</p><a href="/create-quiz" class="btn2 btn2-primary" style="margin-top:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Novi kviz</a></div>`;
-    return;
-  }
-  grid.innerHTML = list.map(q=>{
-    const qr = results.filter(r=>r.quizId===q.id);
-    const avgPct = qr.length ? Math.round(qr.reduce((s,r)=>s+(r.percentage||0),0)/qr.length) : null;
-    return `<div class="quiz-card ${q.status==='active'?'active-card':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div>
-          <div class="qc-title2">${q.title}</div>
-          ${q.description?`<div class="qc-desc2" style="margin-top:6px">${q.description}</div>`:''}
-        </div>
-        <span class="badge2 ${q.status==='active'?'green':'amber'}" style="flex-shrink:0">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="6" height="6"><circle cx="12" cy="12" r="6"/></svg>
-          ${q.status==='active'?'Aktivan':'Neaktivan'}
-        </span>
-      </div>
-      <div class="qc-chips">
-        <span class="chip2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> ${q.subject||'—'}</span>
-        <span class="chip2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${q.numQuestions} pit.</span>
-        <span class="chip2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${q.difficulty}</span>
-        ${q.timeLimit?`<span class="chip2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${q.timeLimit} min</span>`:''}
-        ${qr.length?`<span class="chip2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> ${qr.length} rješenja</span>`:''}
-      </div>
-      ${avgPct!==null?`<div style="margin-top:4px">${renderPctBar(avgPct,'Prosj. ')} </div>`:''}
-      <div class="qc-footer">
-        <button class="btn2 btn2-sm ${q.status==='active'?'btn2-amber':'btn2-success'}" onclick="toggleStatus('${q.id}','${q.status}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">${q.status==='active'?'<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>':'<polygon points="5 3 19 12 5 21 5 3"/>'}</svg>
-          ${q.status==='active'?'Deaktiviraj':'Aktiviraj'}
-        </button>
-        <button class="btn2 btn2-ghost btn2-sm" onclick="openEditModal('${q.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Uredi
-        </button>
-        <button class="btn2 btn2-danger btn2-sm" onclick="confirmAction('Obrisati kviz?','Ova akcija je nepovratna.',()=>delQuiz('${q.id}'))">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── RESULTS ──
-window.filterResults = () => {
-  const search  = document.getElementById('r-search').value.toLowerCase();
-  const razred  = document.getElementById('r-razred').value;
-  const predmet = document.getElementById('r-predmet').value;
-  const grade   = document.getElementById('r-grade').value;
-  const sort    = document.getElementById('r-sort').value;
-
-  let filtered = allResults.filter(r => {
-    const student = users.find(u=>u.id===r.userId);
-    const sr = student?.razred || r.razred || '';
-    if (search  && !r.studentName?.toLowerCase().includes(search) && !r.quizTitle?.toLowerCase().includes(search)) return false;
-    if (razred  && sr !== razred) return false;
-    if (predmet && r.quizSubject !== predmet && !r.quizTitle?.toLowerCase().includes(predmet.toLowerCase())) return false;
-    if (grade   && String(r.grade) !== grade) return false;
-    return true;
-  });
-  if (sort==='pct-desc') filtered.sort((a,b)=>b.percentage-a.percentage);
-  else if (sort==='pct-asc') filtered.sort((a,b)=>a.percentage-b.percentage);
-  else if (sort==='date-asc') filtered.sort((a,b)=>new Date(a.completedAt)-new Date(b.completedAt));
-  else filtered.sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt));
-
-  document.getElementById('r-count').textContent = `${filtered.length} rezultata`;
-  renderResults(filtered);
-};
-
-function renderResults(list) {
-  const wrap = document.getElementById('results-wrap');
-  if (!list.length) { wrap.innerHTML='<div class="empty-state"><div class="empty-icon2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></div><p>Nema rezultata za odabrane filtere</p></div>'; return; }
-  const studentMap = {}; users.forEach(u=>studentMap[u.id]=u);
-  const search = document.getElementById('r-search').value;
-  wrap.innerHTML = `<table class="tbl2">
-    <thead><tr><th>Učenik</th><th>Razred</th><th>Kviz</th><th>Bodovi</th><th>Rezultat</th><th>Ocjena</th><th>Datum</th><th></th></tr></thead>
-    <tbody>${list.map(r=>{
-      const st=studentMap[r.userId]; const razred=st?.razred||r.razred||'—';
-      return `<tr>
-        <td><div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar" style="background:var(--accent-dim);color:var(--accent-light)">${(r.studentName||'?')[0].toUpperCase()}</div>
-          <div>
-            <div style="font-weight:600;color:#fff">${hl(r.studentName,search)}</div>
-            <div style="font-size:11px;color:#64748B">${st?.email||''}</div>
-          </div>
-        </div></td>
-        <td><span class="badge2 blue">${razred}</span></td>
-        <td style="color:#94A3B8;font-size:13px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${hl(r.quizTitle,search)}</td>
-        <td style="font-family:var(--mono);font-size:13px;color:#94A3B8">${r.earnedPoints}/${r.totalPoints}</td>
-        <td>${renderPctBar(r.percentage)}</td>
-        <td>${renderGrade(r.grade,r.gradeLabel)}</td>
-        <td style="color:#475569;font-size:12px;font-family:var(--mono)">${fmtDate(r.completedAt)}</td>
-        <td style="display:flex;gap:6px">
-          <button class="btn2 btn2-ghost btn2-sm" onclick="window.location.href='/result?id=${r.id}'">Detalji</button>
-          <button class="btn2 btn2-danger btn2-sm" onclick="confirmAction('Obrisati rezultat?','Briše se rezultat učenika <strong>${r.studentName}</strong>.',()=>deleteResult('${r.id}'))">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-}
-
-// ── STUDENTS ──
-window.filterStudents = () => {
-  const search = document.getElementById('s-search').value.toLowerCase();
-  const razred = document.getElementById('s-razred').value;
-  const smjer  = document.getElementById('s-smjer').value;
-  const sort   = document.getElementById('s-sort').value;
-
-  let filtered = allStudents.filter(s => {
-    if (search && !s.displayName?.toLowerCase().includes(search) && !s.email?.toLowerCase().includes(search) && !s.razred?.toLowerCase().includes(search)) return false;
-    if (razred && s.razred !== razred) return false;
-    if (smjer  && s.smjer  !== smjer)  return false;
-    return true;
-  });
-
-  const sr = (id) => results.filter(r=>r.userId===id);
-  if (sort==='razred') filtered.sort((a,b)=>(a.razred||'').localeCompare(b.razred||''));
-  else if (sort==='results-desc') filtered.sort((a,b)=>sr(b.id).length-sr(a.id).length);
-  else if (sort==='grade-desc') {
-    filtered.sort((a,b)=>{
-      const ag=sr(a.id),bg=sr(b.id);
-      const aa=ag.length?ag.reduce((s,r)=>s+r.grade,0)/ag.length:0;
-      const ba=bg.length?bg.reduce((s,r)=>s+r.grade,0)/bg.length:0;
-      return ba-aa;
-    });
-  } else filtered.sort((a,b)=>a.displayName?.localeCompare(b.displayName));
-
-  document.getElementById('stu-sub').textContent = `${filtered.length} registrovanih učenika`;
-  document.getElementById('s-count').textContent = `${filtered.length} učenika`;
-  renderStudents(filtered);
-};
-
-function renderStudents(list) {
-  const wrap = document.getElementById('students-wrap');
-  if (!list.length) { wrap.innerHTML='<div class="empty-state"><div class="empty-icon2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><p>Nema učenika za odabrane filtere</p></div>'; return; }
-  const search = document.getElementById('s-search').value;
-  wrap.innerHTML = `<table class="tbl2">
-    <thead><tr><th>Učenik</th><th>Razred</th><th>Smjer</th><th>Email</th><th>Kvizova</th><th>Prosj. ocjena</th><th>Registrovan</th><th></th></tr></thead>
-    <tbody>${list.map(s=>{
-      const sr=results.filter(r=>r.userId===s.id);
-      const avg=sr.length?(sr.reduce((sum,r)=>sum+r.grade,0)/sr.length).toFixed(1):'—';
-      const clr=avg!=='—'?avg>=4?'#FBBF24':avg>=3?'#34D399':'#F87171':'#475569';
-      return `<tr onclick="openStudentDetail('${s.id}')" style="cursor:pointer">
-        <td><div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar" style="background:rgba(34,211,238,.15);color:#22D3EE">${(s.displayName||'?')[0].toUpperCase()}</div>
-          <div>
-            <div style="font-weight:600;color:#fff">${hl(s.displayName||'—',search)}</div>
-          </div>
-        </div></td>
-        <td>${s.razred ? `<span class="badge2 blue">${s.razred}</span>` : '<span class="badge2" style="background:#F8717122;color:#F87171;border:1px solid #F8717144" title="Učenik bez razreda ne vidi materijale namijenjene razredima — klikni olovku i upiši razred">⚠️ bez razreda</span>'}</td>
-        <td style="color:#64748B;font-size:13px">${s.smjer||'—'}</td>
-        <td style="font-size:12.5px;color:#64748B;font-family:var(--mono)">${hl(s.email,search)}</td>
-        <td><span class="badge2 purple">${sr.length}</span></td>
-        <td style="font-size:20px;font-weight:800;color:${clr}">${avg}</td>
-        <td style="color:#475569;font-size:12px;font-family:var(--mono)">${fmtDate(s.createdAt)}</td>
-        <td onclick="event.stopPropagation()" style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn2 btn2-primary btn2-sm" onclick="openEditStudent('${s.id}')" title="Promijeni razred">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Uredi
-          </button>
-          <button class="btn2 btn2-teal btn2-sm" onclick="allowRetry('${s.id}','${s.displayName}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Ponovi
-          </button>
-          <button class="btn2 btn2-danger btn2-sm" onclick="confirmAction('Obrisati učenika?','Obrisat ćete korisnika <strong>${s.displayName}</strong>.',()=>deleteStudent('${s.id}'))">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-}
-
-// ── STUDENT DETAIL PANEL ──
-window.openStudentDetail = (uid) => {
-  const s = allStudents.find(u=>u.id===uid); if (!s) return;
-  const sr = results.filter(r=>r.userId===uid);
-  const avg = sr.length?(sr.reduce((sum,r)=>sum+r.grade,0)/sr.length).toFixed(1):'—';
-  const avgPct = sr.length?Math.round(sr.reduce((sum,r)=>sum+(r.percentage||0),0)/sr.length):0;
-  const clr = avg!=='—'?avg>=4?'#FFB347':avg>=3?'#56CF8F':'#FF6B6B':'rgba(255,255,255,.3)';
-
-  document.getElementById('sd-content').innerHTML = `
-    <div style="text-align:center;margin-bottom:22px;padding-top:10px">
-      <div class="avatar" style="width:68px;height:68px;font-size:26px;background:rgba(34,211,238,.15);color:#22D3EE;margin:0 auto 14px">${(s.displayName||'?')[0].toUpperCase()}</div>
-      <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">${s.displayName||'—'}</div>
-      <div style="font-size:13px;color:#64748B;font-family:var(--mono)">${s.email}</div>
-      <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <span class="badge2 blue">${s.razred||'—'}</span>
-        ${s.smjer?`<span class="badge2 gray">${s.smjer}</span>`:''}
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;text-align:center">
-        <div style="font-size:26px;font-weight:800;color:#A78BFA">${sr.length}</div>
-        <div style="font-size:11px;color:#64748B;margin-top:4px;text-transform:uppercase;letter-spacing:.05em">Kvizova</div>
-      </div>
-      <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;text-align:center">
-        <div style="font-size:26px;font-weight:800;color:${clr}">${avg}</div>
-        <div style="font-size:11px;color:#64748B;margin-top:4px;text-transform:uppercase;letter-spacing:.05em">Prosj. ocjena</div>
-      </div>
-    </div>
-    ${avgPct>0?`<div style="margin-bottom:18px">${renderPctBar(avgPct,'Prosj. ')}</div>`:''}
-    <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:12px">Historija kvizova</div>
-    ${sr.length?sr.slice(0,10).map(r=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:#fff">${r.quizTitle}</div>
-          <div style="font-size:12px;color:#475569;font-family:var(--mono);margin-top:2px">${fmtDate(r.completedAt)}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:16px;font-weight:800;color:${pctColor(r.percentage)}">${r.percentage}%</div>
-          ${renderGrade(r.grade,r.gradeLabel)}
-        </div>
-      </div>`).join(''):'<p style="font-size:13px;color:#475569;text-align:center;padding:20px 0">Nema riješenih kvizova</p>'}
-    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
-      <button class="btn2 btn2-primary btn2-sm" onclick="openEditStudent('${s.id}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Promijeni razred
-      </button>
-      <button class="btn2 btn2-teal btn2-sm" onclick="allowRetry('${s.id}','${s.displayName}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Ponovi kviz
-      </button>
-      <button class="btn2 btn2-danger btn2-sm" onclick="confirmAction('Obrisati učenika?','',()=>deleteStudent('${s.id}'))">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        Obriši
-      </button>
-    </div>`;
-  document.getElementById('student-detail').classList.add('open');
-};
-
-window.closeStudentDetail = () => document.getElementById('student-detail').classList.remove('open');
-
-// ── HIGHLIGHT ──
-function hl(text, search) {
-  if (!search || !text) return text||'';
-  const re = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-  return text.replace(re,'<mark class="hl">$1</mark>');
-}
-
-// ── PCT BAR ──
-function renderPctBar(pct, prefix='') {
-  const c = pct>=80?'#34D399':pct>=60?'#FBBF24':'#F87171';
-  return `<div class="pct-bar">${prefix?`<span style="font-size:11px;color:#64748B">${prefix}</span>`:''}<div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div><span class="bar-val" style="color:${c}">${pct}%</span></div>`;
-}
-
-function renderGrade(grade, label) {
-  const map={5:'amber',4:'green',3:'blue',2:'gray',1:'red'};
-  const cl=map[grade]||'gray';
-  return `<span class="badge2 ${cl}">${grade}${label?' · '+label:''}</span>`;
-}
-
-// ── EDIT MODAL ──
-window.openEditModal = (id) => {
-  editingQuiz = JSON.parse(JSON.stringify(quizzes.find(q=>q.id===id)));
-  if (!editingQuiz) return;
-  document.getElementById('eq-title').value       = editingQuiz.title||'';
-  document.getElementById('eq-subject').value     = editingQuiz.subject||'';
-  document.getElementById('eq-desc').value        = editingQuiz.description||'';
-  document.getElementById('eq-difficulty').value  = editingQuiz.difficulty||'srednje';
-  document.getElementById('eq-time').value        = editingQuiz.timeLimit||30;
-  document.getElementById('eq-topic').value       = editingQuiz.topic||'';
-  document.getElementById('eq-showresults').value = editingQuiz.showResults||'always';
-  renderEditQuestions();
-  document.getElementById('edit-modal').style.display='flex';
-};
-
-window.closeEditModal = () => {
-  document.getElementById('edit-modal').style.display='none'; editingQuiz=null;
-};
-
-function renderEditQuestions() {
-  const container = document.getElementById('eq-questions');
-  if (!editingQuiz?.questions?.length) {
-    container.innerHTML='<p style="color:#475569;font-size:14px;text-align:center;padding:24px 0">Nema pitanja — dodajte prvo pitanje</p>'; return;
-  }
-  const letters=['A','B','C','D','E'];
-  container.innerHTML = editingQuiz.questions.map((q,qi)=>`
-    <div class="qed-item2" id="qed-${qi}">
-      <div class="qed-hdr2">
-        <span class="qed-num2">#${qi+1}</span>
-        <span class="badge2 ${q.type==='true_false'?'purple':'blue'}" style="font-size:10px">${q.type==='true_false'?'T/N':'Višestruki'}</span>
-        <span style="margin-left:auto;font-size:12px;color:#FBBF24;font-family:var(--mono)">${q.points||1} bod</span>
-        <button class="btn2 btn2-danger btn2-sm" onclick="removeQuestion(${qi})" style="padding:4px 8px;margin-left:8px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
-      </div>
-      <div class="fg2" style="margin-bottom:12px">
-        <label>Tekst pitanja</label>
-        <textarea class="ta2" style="min-height:60px" onchange="updateQ(${qi},'question',this.value)">${q.question||''}</textarea>
-      </div>
-      <label style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748B">Opcije — klikni radio za tačan odgovor</label>
-      <div class="qed-opts2">
-        ${q.options.map((opt,oi)=>`
-          <div class="qed-opt2">
-            <span class="opt-lbl2">${letters[oi]||oi+1}</span>
-            <input type="radio" name="correct-${qi}" value="${opt.replace(/"/g,'&quot;')}"
-              ${opt===q.correctAnswer?'checked':''} onchange="updateCorrect(${qi},this.value)"/>
-            <input class="inp2" value="${opt.replace(/"/g,'&quot;')}"
-              onchange="updateOption(${qi},${oi},this.value)" style="font-size:13px;padding:8px 12px"/>
-          </div>`).join('')}
-      </div>
-      <div class="correct-hint2" id="correct-hint-${qi}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline;vertical-align:middle;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>
-        Tačan: <strong>${q.correctAnswer||'—'}</strong>
-      </div>
-      <div class="fg2" style="margin-top:12px">
-        <label>Objašnjenje (opciono)</label>
-        <input class="inp2" style="font-size:13px" value="${(q.explanation||'').replace(/"/g,'&quot;')}"
-          onchange="updateQ(${qi},'explanation',this.value)" placeholder="Kratko objašnjenje tačnog odgovora"/>
-      </div>
-    </div>`).join('');
-}
-
-window.updateQ = (qi,field,val) => { if(editingQuiz?.questions?.[qi]) editingQuiz.questions[qi][field]=val; };
-window.updateOption = (qi,oi,val) => {
-  if (!editingQuiz?.questions?.[qi]) return;
-  const q=editingQuiz.questions[qi]; const old=q.options[oi];
-  if (q.correctAnswer===old) { q.correctAnswer=val; document.getElementById('correct-hint-'+qi).innerHTML=`✓ Tačan odgovor: <strong>${val}</strong>`; document.querySelectorAll(`input[name="correct-${qi}"]`).forEach(r=>{if(r.checked)r.value=val;}); }
-  q.options[oi]=val;
-};
-window.updateCorrect = (qi,val) => { if(!editingQuiz?.questions?.[qi])return; editingQuiz.questions[qi].correctAnswer=val; document.getElementById('correct-hint-'+qi).innerHTML=`✓ Tačan odgovor: <strong>${val}</strong>`; };
-window.removeQuestion = (qi) => { editingQuiz.questions.splice(qi,1); renderEditQuestions(); toast('Pitanje uklonjeno','info'); };
-window.addQuestion = () => {
-  editingQuiz.questions.push({id:'q'+Date.now(),type:'multiple_choice',question:'',options:['A) ','B) ','C) ','D) '],correctAnswer:'A) ',explanation:'',points:1});
-  renderEditQuestions();
-  const m=document.querySelector('.modal2-lg'); setTimeout(()=>m.scrollTop=m.scrollHeight,100);
-};
-
-window.saveQuiz = async () => {
-  const btn=document.getElementById('eq-save-btn'); btnLoad(btn,'Čuvanje...');
-  const title=document.getElementById('eq-title').value.trim();
-  if (!title) { toast('Unesite naziv kviza','error'); btnReset(btn); return; }
-  editingQuiz.title       = title;
-  editingQuiz.subject     = document.getElementById('eq-subject').value.trim();
-  editingQuiz.description = document.getElementById('eq-desc').value.trim();
-  editingQuiz.difficulty  = document.getElementById('eq-difficulty').value;
-  editingQuiz.timeLimit   = +document.getElementById('eq-time').value||30;
-  editingQuiz.topic       = document.getElementById('eq-topic').value.trim();
-  editingQuiz.numQuestions= editingQuiz.questions.length;
-  editingQuiz.totalPoints = editingQuiz.questions.reduce((s,q)=>s+(q.points||1),0);
-  editingQuiz.showResults = document.getElementById('eq-showresults').value;
-  for (let i=0;i<editingQuiz.questions.length;i++) {
-    const q=editingQuiz.questions[i];
-    if (!q.question.trim()) { toast(`Pitanje #${i+1} nema tekst`,'error'); btnReset(btn); return; }
-    if (!q.correctAnswer)   { toast(`Pitanje #${i+1} nema tačan odgovor`,'error'); btnReset(btn); return; }
-  }
-  try {
-    const {id,...data}=editingQuiz;
-    await updateDoc(doc(db,'quizzes',id),data);
-    toast('Kviz sačuvan!','success'); closeEditModal(); await loadAll();
-  } catch(e) { toast('Greška: '+e.message,'error'); btnReset(btn); }
-};
-
-// ── ACTIONS ──
-window.toggleStatus = async (id,current) => {
-  const ns=current==='active'?'inactive':'active';
-  await updateDoc(doc(db,'quizzes',id),{status:ns});
-  toast(ns==='active'?'Kviz aktiviran!':'Kviz deaktiviran','success'); await loadAll();
-};
-window.delQuiz = async (id) => { await deleteDoc(doc(db,'quizzes',id)); toast('Kviz obrisan','success'); await loadAll(); };
-window.deleteResult = async (id) => { await deleteDoc(doc(db,'results',id)); toast('Rezultat obrisan','success'); await loadAll(); };
-window.deleteStudent = async (uid) => {
-  try {
-    await deleteDoc(doc(db,'users',uid));
-    await fetch(`/api/admin/user/${uid}`,{method:'DELETE'});
-    toast('Učenik potpuno obrisan','success'); closeStudentDetail(); await loadAll();
-  } catch(e) { toast('Greška: '+e.message,'error'); }
-};
-
-window.allowRetry = async (uid,name) => {
-  const qSnap = await getDocs(query(collection(db,'quizzes')));
-  const qList = qSnap.docs.map(d=>({id:d.id,...d.data()}));
-  document.getElementById('modal-title').textContent=`Dozvoli ponavljanje — ${name}`;
-  document.getElementById('modal-body').innerHTML=`
-    <p style="margin-bottom:16px;font-size:14px;color:#94A3B8">Odaberite kviz koji učenik može ponovo riješiti:</p>
-    <select class="filter-select" id="retry-quiz-select" style="width:100%;background:rgba(255,255,255,.06)">
-      <option value="">— Odaberite kviz —</option>
-      ${qList.map(q=>`<option value="${q.id}">${q.title}</option>`).join('')}
-    </select>`;
-  document.getElementById('modal-confirm').textContent='Dozvoli';
-  document.getElementById('modal-confirm').className='btn2 btn2-success';
-  document.getElementById('modal-confirm').onclick = async () => {
-    const qid=document.getElementById('retry-quiz-select').value;
-    if (!qid) { toast('Odaberite kviz','error'); return; }
-    const rSnap=await getDocs(collection(db,'results'));
-    const toDel=rSnap.docs.filter(d=>d.data().userId===uid && d.data().quizId===qid);
-    await Promise.all(toDel.map(d=>deleteDoc(doc(db,'results',d.id))));
-    toast(`Dozvoljeno ponavljanje za ${name}`,'success'); closeModal(); await loadAll();
-  };
-  document.getElementById('modal').style.display='flex';
-};
-
-// ── CSV EXPORT ──
-window.exportResultsCSV = () => {
-  const rows=[['Učenik','Razred','Kviz','Bodovi','%','Ocjena','Datum']];
-  allResults.forEach(r=>{
-    const st=users.find(u=>u.id===r.userId);
-    rows.push([r.studentName,st?.razred||r.razred||'',r.quizTitle,`${r.earnedPoints}/${r.totalPoints}`,r.percentage+'%',r.grade,fmtDate(r.completedAt)]);
-  });
-  downloadCSV(rows,'rezultati');
-};
-window.exportStudentsCSV = () => {
-  const rows=[['Ime','Email','Razred','Smjer','Kvizova','Prosj. ocjena']];
-  allStudents.forEach(s=>{
-    const sr=results.filter(r=>r.userId===s.id);
-    const avg=sr.length?(sr.reduce((sum,r)=>sum+r.grade,0)/sr.length).toFixed(1):'';
-    rows.push([s.displayName,s.email,s.razred||'',s.smjer||'',sr.length,avg]);
-  });
-  downloadCSV(rows,'ucenici');
-};
-function downloadCSV(rows,name) {
-  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`kvizmajstor-${name}-${new Date().toISOString().slice(0,10)}.csv`; a.click();
-}
-
-// ── EDIT STUDENT (RAZRED) ──
-window.openEditStudent = (uid) => {
-  const s = allStudents.find(u=>u.id===uid) || users.find(u=>u.id===uid);
-  if (!s) { toast('Učenik nije pronađen','error'); return; }
-  editingStudentId = uid;
-
-  document.getElementById('es-name').value  = s.displayName || '';
-  document.getElementById('es-email').value = s.email || '';
-  document.getElementById('es-smjer').value = s.smjer || '';
-
-  const razredSel = document.getElementById('es-razred');
-  // Ensure current razred exists in select
-  if (s.razred && ![...razredSel.options].some(o=>o.value===s.razred)) {
-    const opt = new Option(s.razred, s.razred);
-    razredSel.appendChild(opt);
-  }
-  razredSel.value = s.razred || '';
-
-  document.getElementById('es-avatar-wrap').innerHTML = `
-    <div class="avatar" style="width:64px;height:64px;font-size:24px;background:rgba(99,102,241,.15);color:#818CF8;margin:0 auto 10px">${(s.displayName||'?')[0].toUpperCase()}</div>
-    <div style="font-size:14px;font-weight:700;color:#fff">${s.displayName||'—'}</div>
-    <div style="font-size:11px;color:#64748B;margin-top:2px">Trenutni razred: <span class="badge2 blue" style="margin-left:6px">${s.razred||'—'}</span></div>
-  `;
-
-  document.getElementById('edit-student-modal').style.display='flex';
-};
-
-window.closeEditStudentModal = () => {
-  document.getElementById('edit-student-modal').style.display='none';
-  editingStudentId = null;
-};
-
-window.saveStudentEdit = async () => {
-  if (!editingStudentId) return;
-  const btn = document.getElementById('es-save-btn');
-  btnLoad(btn,'Čuvanje...');
-
-  const newName   = document.getElementById('es-name').value.trim();
-  const newRazred = document.getElementById('es-razred').value.trim();
-  const newSmjer  = document.getElementById('es-smjer').value.trim();
-
-  if (!newName) { toast('Unesite ime i prezime','error'); btnReset(btn); return; }
-  if (!newRazred) { toast('Odaberite razred','error'); btnReset(btn); return; }
-
-  try {
-    // Pokušaj preko backend API (radi i ako su Firestore rules restriktivne)
-    const resp = await fetch(`/api/admin/user/${editingStudentId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName: newName, razred: newRazred, smjer: newSmjer })
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Backend greška');
-
-    // Fallback ako backend nije konfigurisan – pokušaj direktno client-side
-    if (!data.success) {
-      await updateDoc(doc(db,'users',editingStudentId), {
-        displayName: newName,
-        razred: newRazred,
-        smjer: newSmjer
-      });
-    }
-
-    // Update local cache
-    const idxAll = allStudents.findIndex(s=>s.id===editingStudentId);
-    if (idxAll>=0) {
-      allStudents[idxAll].displayName = newName;
-      allStudents[idxAll].razred = newRazred;
-      allStudents[idxAll].smjer = newSmjer;
-    }
-    const idxU = users.findIndex(u=>u.id===editingStudentId);
-    if (idxU>=0) {
-      users[idxU].displayName = newName;
-      users[idxU].razred = newRazred;
-      users[idxU].smjer = newSmjer;
-    }
-
-    toast(`Razred promijenjen u ${newRazred} za ${newName}`,'success');
-    const savedId = editingStudentId;
-    closeEditStudentModal();
-
-    // Refresh UI
-    populateFilters();
-    filterStudents();
-    filterResults();
-    renderStats();
-    renderOverview();
-
-    // If detail panel open for same student, refresh it
-    const detailOpen = document.getElementById('student-detail').classList.contains('open');
-    if (detailOpen) openStudentDetail(savedId);
-
-  } catch(e) {
-    // Fallback na client-side update ako backend fail-a zbog configa
-    try {
-      await updateDoc(doc(db,'users',editingStudentId), {
-        displayName: newName,
-        razred: newRazred,
-        smjer: newSmjer
-      });
-      const idxAll = allStudents.findIndex(s=>s.id===editingStudentId);
-      if (idxAll>=0) {
-        allStudents[idxAll].displayName = newName;
-        allStudents[idxAll].razred = newRazred;
-        allStudents[idxAll].smjer = newSmjer;
-      }
-      const idxU = users.findIndex(u=>u.id===editingStudentId);
-      if (idxU>=0) {
-        users[idxU].displayName = newName;
-        users[idxU].razred = newRazred;
-        users[idxU].smjer = newSmjer;
-      }
-      toast(`Razred promijenjen u ${newRazred} za ${newName}`,'success');
-      const savedId = editingStudentId;
-      closeEditStudentModal();
-      populateFilters(); filterStudents(); filterResults(); renderStats(); renderOverview();
-      if (document.getElementById('student-detail').classList.contains('open')) openStudentDetail(savedId);
-    } catch(e2) {
-      toast('Greška: '+ (e2.message || e.message),'error');
-      btnReset(btn);
-      return;
-    }
-  }
-  btnReset(btn);
-};
-
-window.confirmAction = (title,body,onConfirm) => {
-  document.getElementById('modal-title').textContent=title;
-  document.getElementById('modal-body').innerHTML=body;
-  document.getElementById('modal-confirm').textContent='Potvrdi';
-  document.getElementById('modal-confirm').className='btn2 btn2-danger';
-  document.getElementById('modal-confirm').onclick=()=>{ onConfirm(); closeModal(); };
-  document.getElementById('modal').style.display='flex';
-};
-window.closeModal = () => document.getElementById('modal').style.display='none';
-
-// ════════════════════════════════════════════════════════════════════
-// LITERATURA / MATERIJALI
-// ════════════════════════════════════════════════════════════════════
-let materials = [], editingMaterialId = null;
 
 async function authHeaders() {
   const t = await auth.currentUser.getIdToken();
   return { Authorization: 'Bearer ' + t };
 }
 
-// ── Učitavanje literature ───────────────────────────────────────────────────
-// Jedino mjesto koje puni `materials`. Poziva se pri prijavi (loadAll) i poslije
-// svake izmjene (dodaj / uredi / sakrij / obriši), pa tab ne ostaje prazan.
-let driveStatusRequested = false;
-
-async function loadMaterials() {
-  // Banner sa Google Drive statusom (i dugme "Poveži Google Drive") se crta
-  // iz loadDriveStatus — tražimo ga samo pri prvom učitavanju.
-  if (!driveStatusRequested) { driveStatusRequested = true; loadDriveStatus(); }
-
-  try {
-    const res  = await fetch('/api/materials', { headers: await authHeaders() });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Greška');
-    materials = data.materials || [];
-  } catch(e) {
-    // Ne rušimo cijeli panel ako /api/materials padne — samo prazna lista.
-    materials = [];
-    console.warn('materials:', e.message);
-    toast('Ne mogu učitati literaturu: ' + e.message, 'error');
-  }
-
-  populateMaterialFilters();
-  filterMaterials();
+function formatRelative(iso) {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '—';
+  const sec = Math.round((Date.now() - t) / 1000);
+  if (sec < 15) return 'upravo sada';
+  if (sec < 60) return sec + ' s';
+  if (sec < 3600) return Math.floor(sec / 60) + ' min';
+  if (sec < 86400) return Math.floor(sec / 3600) + ' h';
+  return new Date(iso).toLocaleString('bs');
 }
 
-let driveInfo = null;
-let driveParamsHandled = false;
-
-// ── GOOGLE DRIVE: status i povezivanje iz panela ─────────────────────────────
-async function loadDriveStatus(force = false) {
-  const el = document.getElementById('store-banner');
-  if (!el) return;
+function shortPage(p) {
+  if (!p) return '—';
   try {
-    const res  = await fetch('/api/drive/status', { headers: await authHeaders() });
+    const u = p.startsWith('http') ? new URL(p).pathname + new URL(p).search : p;
+    return u.length > 40 ? u.slice(0, 38) + '…' : u;
+  } catch { return String(p).slice(0, 40); }
+}
+
+window.loadPresence = async (silent) => {
+  try {
+    const res = await fetch('/api/admin/presence', { headers: await authHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Greška');
-    driveInfo = data;
-  } catch(e) {
-    driveInfo = null;
-    el.innerHTML = `<div class="card" style="padding:16px 18px;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.07)">
-      <div style="font-size:13px;color:#FCA5A5">Ne mogu provjeriti Google Drive: ${e.message}</div>
-    </div>`;
+    presenceUsers = data.users || [];
+    document.getElementById('pres-online').textContent = data.onlineCount ?? 0;
+    document.getElementById('pres-tracked').textContent = data.totalTracked ?? presenceUsers.length;
+    document.getElementById('pres-updated').textContent = new Date().toLocaleTimeString('bs');
+    const badge = document.getElementById('sb-online-count');
+    if (badge) badge.textContent = data.onlineCount ?? 0;
+    filterPresence();
+  } catch (e) {
+    if (!silent) console.error(e);
+    const tb = document.getElementById('pres-tbody');
+    if (tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#F87171;padding:24px">' + (e.message || 'Greška') + '</td></tr>';
+  }
+};
+
+window.filterPresence = () => {
+  const q = (document.getElementById('pres-search')?.value || '').toLowerCase().trim();
+  const f = document.getElementById('pres-filter')?.value || 'all';
+  let list = presenceUsers.slice();
+  if (f === 'online') list = list.filter(u => u.online);
+  else if (f === 'admin') list = list.filter(u => u.role === 'admin');
+  else if (f === 'student') list = list.filter(u => u.role !== 'admin');
+  if (q) {
+    list = list.filter(u =>
+      (u.displayName || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.ip || '').toLowerCase().includes(q) ||
+      (u.razred || '').toLowerCase().includes(q)
+    );
+  }
+  const countEl = document.getElementById('pres-count');
+  if (countEl) countEl.textContent = list.length + ' korisnika';
+  const tb = document.getElementById('pres-tbody');
+  if (!tb) return;
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748B;padding:28px">Nema podataka — otvori stranicu kao učenik da se pojavi heartbeat</td></tr>';
     return;
   }
-
-  const maxEl = document.getElementById('mm-max');
-  if (maxEl) maxEl.textContent = driveInfo.maxUploadMb || 20;
-
-  if (driveInfo.connected) renderDriveConnected();
-  else renderDriveSetup();
-
-  handleDriveRedirectParams();
-}
-
-function renderDriveConnected() {
-  const el = document.getElementById('store-banner');
-  const d  = driveInfo || {};
-  const chip = (color, text) =>
-    `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${color};background:${color}1A;border:1px solid ${color}33;border-radius:999px;padding:4px 10px">${text}</span>`;
-  const kv = (label, value) =>
-    `<div style="display:flex;gap:8px;font-size:12.5px;color:#94A3B8"><span style="color:#64748B">${label}</span><span style="color:#CBD5E1;font-weight:600">${value}</span></div>`;
-
-  const quota = d.storage && d.storage.limit
-    ? `${fmtSize(d.storage.usage)} / ${fmtSize(d.storage.limit)}`
-    : (d.storage ? `${fmtSize(d.storage.usage)} iskorišteno` : '—');
-  const folderNote = d.folder && d.folder.error
-    ? `<div style="font-size:12px;color:#F59E0B;margin-top:10px">⚠️ Folder: ${d.folder.error}</div>`
-    : '';
-
-  el.innerHTML = `<div class="card" style="padding:16px 18px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      ${chip('#22C55E', '● Google Drive povezan')}
-      ${chip('#3B82F6', (d.mode === 'oauth' ? 'Tvoj lični Drive' : 'Service account'))}
-      ${d.email ? `<span style="font-size:12.5px;color:#64748B">${d.email}</span>` : ''}
-      <span style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn2 btn2-ghost btn2-sm" onclick="loadDriveStatus(true)">Provjeri vezu</button>
-        ${d.folder && d.folder.id ? `<button class="btn2 btn2-ghost btn2-sm" onclick="window.open('https://drive.google.com/drive/folders/${d.folder.id}','_blank')">Otvori folder</button>` : ''}
-        <button class="btn2 btn2-danger btn2-sm" onclick="driveDisconnect()">Prekini vezu</button>
-      </span>
-    </div>
-    <div style="display:flex;gap:22px;flex-wrap:wrap">
-      ${kv('Folder:', d.folder ? (d.folder.name || 'folder') : 'Korijen Drive-a')}
-      ${kv('Zauzeće:', quota)}
-      ${kv('Novi fajlovi:', 'Google Drive')}
-    </div>${folderNote}
-    <div style="font-size:11.5px;color:#64748B;margin-top:10px">
-      Materijali se čuvaju na Google Drive-u pod nazivom koji upišeš. Ništa se ne čuva u bazi.
-    </div>
-  </div>`;
-}
-
-function renderDriveSetup() {
-  const el  = document.getElementById('store-banner');
-  const uri = (driveInfo && driveInfo.redirectUri) || (location.origin + '/api/drive/connect/callback');
-  el.innerHTML = `<div class="card" style="padding:18px;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.06)">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-      <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F59E0B;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:4px 10px">● Google Drive nije povezan</span>
-      <span style="font-size:12.5px;color:#94A3B8">Poveži ga jednom — posle sve ide samo klikom na „Dodaj materijal".</span>
-    </div>
-
-    <div style="font-size:13px;color:#CBD5E1;line-height:1.9;margin-top:10px">
-      <b>1.</b> Otvori
-      <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener" style="color:#7EB8FF">Google Drive API</a>
-      u projektu <b>kviz-13f52</b> i klikni <b>Enable</b> (ako već nije uključen).<br/>
-      <b>2.</b> Otvori
-      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color:#7EB8FF">Credentials</a>
-      → <b>Create credentials</b> → <b>OAuth client ID</b> → tip <b>Web application</b>.<br/>
-      <b>3.</b> U polje <b>Authorized redirect URIs</b> zalijepi ovaj link i sačuvaj:
-    </div>
-
-    <div style="display:flex;gap:8px;align-items:center;margin:10px 0 14px;flex-wrap:wrap">
-      <code id="drive-redirect-uri" style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 11px;color:#CBD5E1">${uri}</code>
-      <button class="btn2 btn2-ghost btn2-sm" onclick="copyRedirectUri()">Kopiraj</button>
-    </div>
-
-    <div style="font-size:13px;color:#CBD5E1;margin-bottom:8px"><b>4.</b> Zalijepi ovdje Client ID i Client Secret iz tog istog ekrana:</div>
-    <div class="row2" style="margin-bottom:10px">
-      <div class="fg2"><label>Client ID</label><input class="inp2" id="drive-client-id" placeholder="123456-abc.apps.googleusercontent.com"/></div>
-      <div class="fg2"><label>Client Secret</label><input class="inp2" id="drive-client-secret" type="password" placeholder="GOCSPX-..."/></div>
-    </div>
-    <div class="fg2" style="margin-bottom:12px">
-      <label>Folder na Drive-u (opciono)</label>
-      <input class="inp2" id="drive-folder-id" placeholder="ID iz linka: drive.google.com/drive/folders/OVO_JE_ID"/>
-      <div style="font-size:11.5px;color:#64748B;margin-top:6px">Ako ostaviš prazno, fajlovi idu u korijen Drive-a.</div>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button class="btn2 btn2-primary" id="drive-connect-btn" onclick="driveConnect()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        Poveži Google Drive
-      </button>
-      <span style="font-size:12px;color:#64748B">Otvorit će se Google prijava — odaberi svoj nalog i dozvoli pristup.</span>
-    </div>
-
-    <div style="font-size:11.5px;color:#64748B;margin-top:12px">
-      Fajlovi ostaju na tvom Drive-u. Pristup se može prekinuti u svakom trenutku (dugme „Prekini vezu").
-    </div>
-  </div>`;
-}
-
-function driveRedirectToast() {
-  const params = new URLSearchParams(location.search);
-  const state  = params.get('drive');
-  if (!state) return;
-  if (state === 'connected') {
-    const acc = params.get('account');
-    toast('Google Drive povezan' + (acc ? ': ' + acc : ''), 'success');
-  } else if (state === 'error') {
-    toast('Drive nije povezan: ' + (params.get('msg') || 'greška'), 'error');
-  }
-  history.replaceState(null, '', location.pathname);
-}
-
-function handleDriveRedirectParams() {
-  if (driveParamsHandled) return;
-  driveParamsHandled = true;
-  driveRedirectToast();
-}
-
-window.copyRedirectUri = async () => {
-  const uri = document.getElementById('drive-redirect-uri')?.textContent?.trim();
-  if (!uri) return;
-  try { await navigator.clipboard.writeText(uri); toast('Link kopiran — zalijepi ga u Google Console','success'); }
-  catch { window.prompt('Kopiraj link:', uri); }
-};
-
-window.driveConnect = async () => {
-  const btn    = document.getElementById('drive-connect-btn');
-  const clientId     = document.getElementById('drive-client-id')?.value.trim();
-  const clientSecret = document.getElementById('drive-client-secret')?.value.trim();
-  const folderId     = document.getElementById('drive-folder-id')?.value.trim() || '';
-
-  if (!clientId || !clientSecret) { toast('Unesi Client ID i Client Secret','error'); return; }
-
-  btnLoad(btn, 'Otvaram Google...');
-  try {
-    const res  = await fetch('/api/drive/connect', {
-      method: 'POST',
-      headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
-      body: JSON.stringify({ clientId, clientSecret, folderId })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Greška');
-    window.location.href = data.url;      // Google prijava → vraća na naš callback
-  } catch(e) {
-    toast('Greška: ' + e.message, 'error');
-    btnReset(btn);
-  }
-};
-
-window.driveDisconnect = () => {
-  confirmAction('Prekini vezu sa Drive-om',
-    'Materijali <b>ostaju</b> na Drive-u, ali stranica im neće moći pristupiti dok se ponovo ne povežeš.',
-    async () => {
-      try {
-        const res  = await fetch('/api/drive/disconnect', { method:'POST', headers: await authHeaders() });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Greška');
-        toast('Veza prekinuta','success');
-        await loadDriveStatus(true);
-      } catch(e) { toast('Greška: ' + e.message,'error'); }
-    });
-};
-
-function populateMaterialFilters() {
-  const predmeti = [...new Set(materials.map(m=>m.subject).filter(Boolean))].sort();
-  const pd = document.getElementById('m-predmet');
-  if (pd) { while(pd.options.length>1) pd.remove(1); predmeti.forEach(p=>pd.appendChild(new Option(p,p))); }
-
-  const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
-  const razredi   = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
-  const rz = document.getElementById('m-razred');
-  if (rz) { while(rz.options.length>1) rz.remove(1); razredi.forEach(r=>rz.appendChild(new Option(r,r))); }
-
-  const dl = document.getElementById('mm-subject-list');
-  if (dl) {
-    const svi = [...new Set([...predmeti, ...quizzes.map(q=>q.subject).filter(Boolean)])].sort();
-    dl.innerHTML = svi.map(p=>`<option value="${p}"></option>`).join('');
-  }
-}
-
-function fileIcon(ext) {
-  const map = { pdf:'#F87171', doc:'#60A5FA', docx:'#60A5FA', ppt:'#FB923C', pptx:'#FB923C', txt:'#94A3B8' };
-  const c = map[ext] || '#94A3B8';
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:${c}22;color:${c};font-size:10px;font-weight:800;letter-spacing:.02em">${(ext||'?').toUpperCase()}</span>`;
-}
-function fmtSize(b) {
-  if (!b) return '—';
-  return b >= 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(b/1024))+' KB';
-}
-
-// ── Vidljivost materijala (ista logika kao server: lib/materials.js) ──────────
-// normRazred mora biti identičan serverskom normalizeRazred — testovi to
-// provjeravaju izvršavanjem ovog stvarnog izvora (tests/admin-materials-page).
-function normRazred(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-')
-    .replace(/\s*-\s*/g, '-')
-    .replace(/\s+/g, '-')
-    .toUpperCase();
-}
-
-// Vraća niz učenika koji vide dati materijal (prazan niz = ne vidi niko).
-function materialVisibleTo(material, students) {
-  const list = Array.isArray(students) ? students : [];
-  if (!material || material.visible === false) return [];
-  const raw = Array.isArray(material.razredi) ? material.razredi : [];
-  const targets = [...new Set(raw.map(normRazred).filter(Boolean))];
-  if (targets.length === 0) return list.slice();
-  return list.filter(s => targets.includes(normRazred(s.razred)));
-}
-
-// Kratka oznaka ispod kolone "Razredi": koliko učenika vidi materijal.
-function visibilityBadge(m, students) {
-  const list = Array.isArray(students) ? students : [];
-  if (m.visible === false) return '<div style="font-size:11px;color:#64748B">sakriveno</div>';
-  if (list.length === 0) return '';
-  const n = materialVisibleTo(m, list).length;
-  if (n === 0) return `<div style="font-size:11px;color:#F87171;font-weight:700">⚠️ ne vidi niko (0/${list.length})</div>`;
-  return `<div style="font-size:11px;color:#34D399">👁 ${n}/${list.length} učenika</div>`;
-}
-
-// Živi brojač u modalu "Dodaj/Uredi materijal" — osvježava se na svaku kvačicu.
-function updateMaterialVisibility() {
-  const el = document.getElementById('mm-vis');
-  if (!el) return;
-  const sel   = [...document.querySelectorAll('.mm-rz:checked')].map(c=>c.value);
-  const total = allStudents.length;
-  if (total === 0) { el.innerHTML = ''; return; }
-  const who = materialVisibleTo({ razredi: sel, visible: true }, allStudents);
-  if (sel.length === 0) {
-    el.style.color = '#34D399';
-    el.innerHTML = `👁 Vidjeće svi učenici (${total}).`;
-  } else if (who.length === 0) {
-    el.style.color = '#F87171';
-    el.innerHTML = '⚠️ Nijedan učenik neće vidjeti ovaj materijal! Provjeri da učenici imaju upisan razred (kartica Učenici → olovka).';
-  } else {
-    el.style.color = '#34D399';
-    el.innerHTML = `👁 Vidjeće ${who.length} od ${total} učenika.`;
-  }
-}
-
-window.filterMaterials = () => {
-  const search  = (document.getElementById('m-search')?.value || '').toLowerCase();
-  const predmet = document.getElementById('m-predmet')?.value || '';
-  const razred  = document.getElementById('m-razred')?.value || '';
-
-  const filtered = materials.filter(m => {
-    if (search && !(`${m.title} ${m.subject} ${m.fileName} ${m.description}`.toLowerCase().includes(search))) return false;
-    if (predmet && m.subject !== predmet) return false;
-    if (razred) {
-      const rList = Array.isArray(m.razredi) ? m.razredi : [];
-      if (!(rList.length===0 || rList.some(x => normRazred(x) === normRazred(razred)))) return false;
-    }
-    return true;
-  });
-
-  document.getElementById('m-count').textContent = `${filtered.length} materijala`;
-  const wrap = document.getElementById('materials-wrap');
-  if (!filtered.length) {
-    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon2">📚</div><div>Još nema dodane literature</div></div>`;
-    return;
-  }
-  wrap.innerHTML = `<table class="tbl2">
-    <thead><tr><th>Materijal</th><th>Predmet</th><th>Razredi</th><th>Fajl</th><th>Dodano</th><th>Vidljivo</th><th style="text-align:right">Akcije</th></tr></thead>
-    <tbody>${filtered.map(m=>`
-      <tr>
-        <td>
-          <div style="display:flex;align-items:center;gap:10px">
-            ${fileIcon(m.ext)}
-            <div style="min-width:0">
-              <div style="font-weight:600;font-size:13.5px">${m.title}</div>
-              <div style="font-size:11.5px;color:#64748B">${m.fileName} · ${m.downloads||0} preuzimanja</div>
-            </div>
-          </div>
-        </td>
-        <td>${m.subject ? `<span class="badge2 blue">${m.subject}</span>` : '—'}</td>
-        <td style="font-size:12px;color:#94A3B8">${(m.razredi&&m.razredi.length) ? m.razredi.join(', ') : 'Svi'}${visibilityBadge(m, allStudents)}</td>
-        <td>
-          <div style="font-size:12.5px">${fmtSize(m.size)}</div>
-          <div style="margin-top:3px">${storeBadge(m)}</div>
-        </td>
-        <td style="font-size:12.5px">${fmtDate(m.createdAt)}</td>
-        <td>
-          ${m.visible===false ? '<span class="badge2 red">Skriveno</span>' : '<span class="badge2 green">Da</span>'}
-          ${m.shareUrl ? '<div style="margin-top:3px"><span class="badge2 purple">Javni link</span></div>' : ''}
-        </td>
-        <td style="text-align:right;white-space:nowrap">
-          <button class="btn2 btn2-ghost btn2-sm" onclick="openMaterial('${m.id}')" title="Otvori u pregledu">Otvori</button>
-          ${m.shareUrl ? `<button class="btn2 btn2-ghost btn2-sm" onclick="copyMaterialLink('${m.id}')" title="Kopiraj link za dijeljenje">Link</button>` : ''}
-          ${m.drive ? `<button class="btn2 btn2-ghost btn2-sm" onclick="openMaterialDrive('${m.id}')" title="Otvori na Google Drive-u">Drive</button>` : ''}
-          <button class="btn2 btn2-ghost btn2-sm" onclick="toggleMaterial('${m.id}')" title="Vidljivost učenicima">${m.visible===false?'Prikaži':'Sakrij'}</button>
-          <button class="btn2 btn2-primary btn2-sm" onclick="openMaterialModal('${m.id}')">Uredi</button>
-          <button class="btn2 btn2-danger btn2-sm" onclick="deleteMaterial('${m.id}')">Obriši</button>
-        </td>
-      </tr>`).join('')}
-    </tbody></table>`;
-};
-
-// Mala oznaka gdje fajl živi (Google Drive / interna baza)
-function storeBadge(m) {
-  if (m.drive || m.storeKind === 'drive') {
-    return '<span class="badge2 green" title="Fajl je na Google Drive-u">Google Drive</span>';
-  }
-  if (m.storeKind === 'firestore') return '<span class="badge2 blue" title="Fajl je u internoj bazi">Baza</span>';
-  if (m.storeKind === 'storage') return '<span class="badge2 blue">Storage</span>';
-  return '<span class="badge2">—</span>';
-}
-
-window.openMaterial = async (id) => {
-  const t = await auth.currentUser.getIdToken();
-  // Viewer stranica: PDF se čita u browseru, ostalo nudi preuzimanje / Drive pregled
-  window.open(`/viewer?id=${encodeURIComponent(id)}&t=${encodeURIComponent(t)}`, '_blank');
-};
-
-window.openMaterialDrive = (id) => {
-  const m = materials.find(x=>x.id===id);
-  const url = m?.drive?.drive || m?.drive?.preview;
-  if (!url) { toast('Ovaj materijal nije na Google Drive-u','error'); return; }
-  window.open(url, '_blank');
-};
-
-window.copyMaterialLink = async (id) => {
-  const m = materials.find(x=>x.id===id);
-  if (!m?.shareUrl) { toast('Javni link je isključen za ovaj materijal','error'); return; }
-  try {
-    await navigator.clipboard.writeText(m.shareUrl);
-    toast('Link kopiran: '+m.shareUrl,'success');
-  } catch(e) {
-    window.prompt('Kopiraj link:', m.shareUrl);
-  }
-};
-
-window.openMaterialModal = (id = null) => {
-  editingMaterialId = id;
-  populateMaterialFilters();
-  const m = id ? materials.find(x=>x.id===id) : null;
-  document.getElementById('mm-title').textContent = m ? 'Uredi materijal' : 'Dodaj materijal';
-  document.getElementById('mm-name').value    = m?.title || '';
-  document.getElementById('mm-subject').value = m?.subject || '';
-  document.getElementById('mm-desc').value    = m?.description || '';
-  document.getElementById('mm-file-fld').style.display = m ? 'none' : 'flex';
-  const fileEl = document.getElementById('mm-file'); if (fileEl) fileEl.value = '';
-  const shareEl = document.getElementById('mm-share');
-  if (shareEl) shareEl.checked = m ? !!m.shareUrl : true;
-
-  const note = document.getElementById('mm-store-note');
-  if (note) {
-    const active = driveInfo?.connected;
-    note.innerHTML = m
-      ? (m.drive ? 'Fajl je na Google Drive-u — izmjena naziva se prenosi i tamo.' : 'Fajl je u internoj bazi.')
-      : (active ? 'Fajl se uplouduje direktno na tvoj Google Drive — ne moraš ručno ništa stavljati tamo.'
-                : '⚠️ Google Drive nije povezan — prvo ga poveži u ovom tabu (gore), pa onda dodaj materijal.');
-  }
-
-  const razrediDb = [...new Set(allStudents.map(s=>s.razred).filter(Boolean))];
-  const razredi   = [...new Set([...ALL_RAZREDI, ...razrediDb])].sort();
-  const sel = new Set(m?.razredi || []);
-  document.getElementById('mm-razredi').innerHTML = razredi.map(r=>`
-    <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);font-size:12.5px;cursor:pointer">
-      <input type="checkbox" class="mm-rz" value="${r}" ${sel.has(r)?'checked':''}/> ${r}
-    </label>`).join('');
-  document.querySelectorAll('.mm-rz').forEach(c => { c.onchange = updateMaterialVisibility; });
-  updateMaterialVisibility();
-
-  document.getElementById('material-modal').style.display = 'flex';
-};
-window.closeMaterialModal = () => { document.getElementById('material-modal').style.display='none'; editingMaterialId=null; };
-
-window.saveMaterial = async () => {
-  const btn   = document.getElementById('mm-save');
-  const title = document.getElementById('mm-name').value.trim();
-  const subject = document.getElementById('mm-subject').value.trim();
-  const description = document.getElementById('mm-desc').value.trim();
-  const razredi = [...document.querySelectorAll('.mm-rz:checked')].map(c=>c.value);
-  const shareEnabled = document.getElementById('mm-share')?.checked ? '1' : '0';
-  const file = document.getElementById('mm-file')?.files?.[0];
-
-  if (!editingMaterialId && !file) { toast('Odaberite fajl','error'); return; }
-  if (!title && !file) { toast('Unesite naziv','error'); return; }
-
-  btnLoad(btn, editingMaterialId ? 'Čuvam...' : 'Upload u toku...');
-  try {
-    if (editingMaterialId) {
-      const res = await fetch('/api/materials/'+editingMaterialId, {
-        method: 'PUT',
-        headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
-        body: JSON.stringify({ title, subject, description, razredi, shareEnabled: shareEnabled === '1' })
-      });
-      const d = await res.json(); if (!res.ok) throw new Error(d.error);
-      toast('Materijal ažuriran','success');
-    } else {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('title', title || file.name);
-      fd.append('subject', subject);
-      fd.append('description', description);
-      fd.append('razredi', JSON.stringify(razredi));
-      fd.append('shareEnabled', shareEnabled);
-      const res = await fetch('/api/materials', { method:'POST', headers: await authHeaders(), body: fd });
-      const d = await res.json(); if (!res.ok) throw new Error(d.error);
-      const where = d.material?.drive ? 'na Google Drive' : 'u skladište';
-      toast(`Materijal dodan ${where}`,'success');
-      if (d.material?.shareUrl) {
-        try { await navigator.clipboard.writeText(d.material.shareUrl); toast('Link kopiran','success'); } catch(e) {}
-      }
-    }
-    closeMaterialModal();
-    await loadMaterials();
-  } catch(e) { toast('Greška: '+e.message,'error'); }
-  btnReset(btn);
-};
-
-window.toggleMaterial = async (id) => {
-  const m = materials.find(x=>x.id===id); if (!m) return;
-  try {
-    const res = await fetch('/api/materials/'+id, {
-      method:'PUT',
-      headers: { ...(await authHeaders()), 'Content-Type':'application/json' },
-      body: JSON.stringify({ visible: m.visible === false })
-    });
-    const d = await res.json(); if (!res.ok) throw new Error(d.error);
-    await loadMaterials();
-  } catch(e) { toast('Greška: '+e.message,'error'); }
-};
-
-window.deleteMaterial = (id) => {
-  const m = materials.find(x=>x.id===id); if (!m) return;
-  confirmAction('Obriši materijal', `Sigurno obrisati <b>${m.title}</b>? Fajl se trajno briše.`, async () => {
-    try {
-      const res = await fetch('/api/materials/'+id, { method:'DELETE', headers: await authHeaders() });
-      const d = await res.json(); if (!res.ok) throw new Error(d.error);
-      toast('Materijal obrisan','success');
-      await loadMaterials();
-    } catch(e) { toast('Greška: '+e.message,'error'); }
-  });
-};
-
-document.getElementById('material-modal').onclick = (e) => {
-  if (e.target === document.getElementById('material-modal')) closeMaterialModal();
+  tb.innerHTML = list.map(u => {
+    const status = u.online
+      ? '<span class="badge2 green"><span style="width:7px;height:7px;border-radius:50%;background:#34D399;display:inline-block"></span> Online</span>'
+      : '<span class="badge2 gray">Offline</span>';
+    const role = u.role === 'admin'
+      ? '<span class="badge2 purple">Admin</span>'
+      : '<span class="badge2 blue">Učenik</span>';
+    return '<tr>' +
+      '<td>' + status + '</td>' +
+      '<td><div style="font-weight:600;color:#fff">' + (u.displayName || '—') + '</div>' +
+        '<div style="font-size:12px;color:#64748B;font-family:var(--mono)">' + (u.email || '') + '</div></td>' +
+      '<td>' + role + '</td>' +
+      '<td>' + (u.razred || '—') + '</td>' +
+      '<td style="font-family:var(--mono);font-size:13px">' + (u.ip || '—') + '</td>' +
+      '<td style="font-size:13px;color:#94A3B8" title="' + (u.page || '') + '">' + shortPage(u.page) + '</td>' +
+      '<td style="font-size:13px">' + formatRelative(u.lastSeen) + '</td>' +
+      '</tr>';
+  }).join('');
 };
 </script>
 </body>
