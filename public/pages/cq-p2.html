@@ -1,0 +1,169 @@
+
+    if (u) startPresence('/create-quiz');
+      if (!u) { window.location.href = '/login'; return; }
+      // Admin only
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      if (!snap.exists() || snap.data().role !== 'admin') {
+        window.location.href = '/student';
+        return;
+      }
+    });
+
+    document.getElementById('logout-btn').onclick = () =>
+      signOut(auth).then(() => window.location.href = '/login');
+
+    /* ── PDF drop zone ── */
+    const drop = document.getElementById('pdf-drop');
+    const pdfInput = document.getElementById('pdf-input');
+    let pdfFile = null;
+
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault(); drop.classList.remove('over');
+      if (e.dataTransfer.files[0]) setPdf(e.dataTransfer.files[0]);
+    });
+    pdfInput.onchange = () => { if (pdfInput.files[0]) setPdf(pdfInput.files[0]); };
+
+    function setPdf(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        toast('Samo PDF fajlovi', 'error'); return;
+      }
+      pdfFile = file;
+      drop.innerHTML = `<div class="pdf-drop-icon">📄</div>
+        <div class="pdf-name">${file.name}</div>
+        <div class="pdf-sz">${(file.size/1024/1024).toFixed(2)} MB · Kliknite za promjenu</div>`;
+      drop.onclick = () => pdfInput.click();
+    }
+
+    /* ── Question type toggles ── */
+    document.querySelectorAll('.qtype-lbl').forEach(lbl => {
+      lbl.addEventListener('click', () => {
+        const cb = lbl.querySelector('input');
+        cb.checked = !cb.checked;
+        lbl.classList.toggle('selected', cb.checked);
+      });
+    });
+
+    /* ── Multi-answer toggle ── */
+    const multiLbl = document.getElementById('multi-ans-lbl');
+    if (multiLbl) {
+      multiLbl.addEventListener('click', () => {
+        const cb = document.getElementById('multiAns');
+        cb.checked = !cb.checked;
+        multiLbl.classList.toggle('on', cb.checked);
+      });
+    }
+
+    /* ── Step helpers ── */
+    function setStep(n) {
+      for (let i = 1; i <= 3; i++) {
+        const sc = document.getElementById('sc' + i);
+        const sl = document.getElementById('sl' + i);
+        const line = document.getElementById('sline' + i);
+        sc.className = 'sc' + (i < n ? ' done' : i === n ? ' active' : '');
+        sl.className = 'sl' + (i === n ? ' active' : '');
+        if (line) line.className = 'sline' + (i < n ? ' done' : '');
+        const panel = document.getElementById('step' + i);
+        if (panel) panel.style.display = i === n ? 'block' : 'none';
+      }
+    }
+
+    /* ── Generate ── */
+    let generated = null;
+    document.getElementById('gen-btn').onclick = async function() {
+      if (!pdfFile) { toast('Odaberite PDF', 'error'); return; }
+      const types = [...document.querySelectorAll('.qtype-lbl input:checked')].map(c => c.value);
+      if (!types.length) { toast('Odaberite tip pitanja', 'error'); return; }
+
+      const btn = this;
+      btnLoad(btn, 'Generišem...');
+      setStep(2);
+
+      // Animate step chips
+      const chips = document.querySelectorAll('.gen-step-chip');
+      chips.forEach((c,i) => setTimeout(() => { c.classList.add('active'); }, i * 800));
+
+      try {
+        const fd = new FormData();
+        fd.append('pdf', pdfFile);
+        fd.append('numQuestions', document.getElementById('numQ').value);
+        fd.append('difficulty', document.getElementById('difficulty').value);
+        fd.append('questionTypes', JSON.stringify(types));
+        fd.append('subject', document.getElementById('subject').value);
+        fd.append('topic', document.getElementById('topic').value);
+        fd.append('allowMultiple', document.getElementById('multiAns')?.checked ? '1' : '0');
+
+        const res = await fetch('/api/generate-quiz', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Greška');
+
+        generated = data.questions;
+        chips.forEach(c => { c.classList.remove('active'); c.classList.add('done'); });
+        showPreview(generated);
+        setStep(3);
+        toast('Kviz generisan!', 'success');
+      } catch(e) {
+        toast(e.message, 'error');
+        setStep(1);
+      }
+      btnReset(btn);
+    };
+
+    function showPreview(questions) {
+      const subject = document.getElementById('subject').value;
+      const topic = document.getElementById('topic').value;
+      document.getElementById('prev-title').textContent =
+        (subject || 'Kviz') + (topic ? ' — ' + topic : '');
+      document.getElementById('prev-desc').textContent =
+        questions.length + ' pitanja · ' + document.getElementById('difficulty').value +
+        ' · ' + document.getElementById('timeLimit').value + ' min';
+
+      const list = document.getElementById('q-list');
+      list.innerHTML = questions.map((q, i) => {
+        const opts = (q.options || []).map(o => {
+          const ok = o === q.correctAnswer || (Array.isArray(q.correctAnswer) && q.correctAnswer.includes(o));
+          return `<div class="opt${ok?' correct':''}"><span class="opt-icon">${ok?'✓':''}</span>${o}</div>`;
+        }).join('');
+        return `<div class="q-card">
+          <div class="q-hdr"><span class="q-num">P${i+1}</span>
+            <span class="q-pts">${q.points||1} bod</span></div>
+          <div class="q-text">${q.question}</div>
+          <div class="opts">${opts}</div>
+          ${q.explanation?`<div class="expl">💡 ${q.explanation}</div>`:''}
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('btn-back')?.addEventListener('click', () => setStep(1));
+
+    document.getElementById('save-btn').onclick = async function() {
+      if (!generated) return;
+      const title = document.getElementById('quiz-title')?.value?.trim()
+        || ((document.getElementById('subject').value || 'Kviz') + ' — ' + (document.getElementById('topic').value || 'Nova tema'));
+      const btn = this;
+      btnLoad(btn, 'Čuvam...');
+      try {
+        await addDoc(collection(db, 'quizzes'), {
+          title,
+          subject: document.getElementById('subject').value,
+          topic: document.getElementById('topic').value,
+          description: '',
+          difficulty: document.getElementById('difficulty').value,
+          timeLimit: parseInt(document.getElementById('timeLimit').value),
+          showResults: document.getElementById('showResults').value,
+          questions: generated,
+          totalPoints: generated.reduce((s,q)=>s+(q.points||1),0),
+          status: 'draft',
+          createdAt: new Date().toISOString()
+        });
+        toast('✅ Kviz sačuvan!', 'success');
+        setTimeout(() => window.location.href = '/admin', 800);
+      } catch(e) {
+        toast('Greška pri čuvanju: ' + e.message, 'error');
+        btnReset(btn);
+      }
+    };
+  </script>
+</body>
+</html>
