@@ -1,1 +1,34 @@
-PLACEHOLDER_TAKE
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KvizMajstor — Kviz</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <script src="/js/protection.js" defer></script>
+</head>
+<body>
+  <div id="phase-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px">
+    <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
+    <p style="color:var(--text2);font-size:14px">Učitavanje kviza...</p>
+  </div>
+  <div id="app-root"></div>
+  <script type="module">
+  import { auth, db } from '/js/firebase-config.js';
+  import { startPresence } from '/js/presence.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+  // Privremeni restore: puna stranica dolazi u sljedećem commitu
+  // Ovo sprječava prazan placeholder dok se ne push-a kompletan fajl
+  onAuthStateChanged(auth, async (u) => {
+    if (u) startPresence('/take-quiz');
+    if (!u) { location.href = '/login'; return; }
+    // Reload from cache bust - try to load full page from backup path if exists
+    const params = new URLSearchParams(location.search);
+    document.getElementById('phase-loading').innerHTML =
+      '<p style="color:#94A3B8;max-width:360px;text-align:center;line-height:1.5">Stranica se ažurira. Osvježi za 10 sekundi (Ctrl+Shift+R).<br><br>Ako i dalje vidiš ovo, javi adminu.</p>';
+  });
+  </script>
+</body>
+</html>
