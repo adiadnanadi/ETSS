@@ -6,29 +6,221 @@
   <title>KvizMajstor — Kviz</title>
   <link rel="stylesheet" href="/css/style.css"/>
   <script src="/js/protection.js" defer></script>
+  <style>
+    #phase-intro {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px; position: relative; overflow: hidden;
+    }
+    .intro-box {
+      background: rgba(31,48,88,.65);
+      border: 1px solid rgba(91,164,255,.2);
+      border-radius: 28px; padding: 44px 40px;
+      width: 100%; max-width: 520px; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      backdrop-filter: blur(20px); position: relative; z-index: 1;
+    }
+    .intro-title { font-family: var(--fd); font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .intro-desc { font-size: 14px; color: var(--text2); margin-bottom: 28px; line-height: 1.7; }
+    .intro-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+    .im-item { background: rgba(26,39,68,.7); border: 1px solid var(--border); border-radius: 14px; padding: 14px 12px; }
+    .im-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; font-weight: 600; }
+    .im-val { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
+    #phase-quiz { min-height: 100vh; }
+    .quiz-topbar { background: rgba(13,15,20,.94); border-bottom: 1px solid rgba(91,164,255,.1); position: sticky; top: 0; z-index: 40; }
+    .qtb-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; max-width: 1100px; margin: 0 auto; }
+    .qtb-timer { font-family: var(--fm); font-size: 20px; font-weight: 600; }
+    .quiz-body { display: grid; grid-template-columns: 210px 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 28px; }
+    @media(max-width:700px) { .quiz-body { grid-template-columns: 1fr; } }
+    .quiz-nav { background: rgba(31,48,88,.5); border: 1px solid var(--border); border-radius: 20px; padding: 20px; position: sticky; top: 85px; }
+    .nav-dots { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }
+    .nd { aspect-ratio: 1; border: 1.5px solid var(--border); background: rgba(26,39,68,.6); border-radius: 10px; font-size: 11px; font-weight: 700; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .nd.cur { border-color: var(--accent) !important; background: var(--accent-dim) !important; color: var(--accent) !important; }
+    .nd.ans { border-color: rgba(62,207,110,.35); background: var(--green-dim); color: var(--green); }
+    .qc-opt { display: flex; align-items: center; gap: 16px; background: rgba(26,39,68,.5); border: 2px solid var(--border); border-radius: 16px; padding: 16px 20px; cursor: pointer; font-size: 15px; color: var(--text2); width: 100%; text-align: left; margin-bottom: 10px; }
+    .qc-opt.sel { border-color: var(--accent) !important; background: rgba(91,164,255,.1) !important; color: var(--text) !important; }
+    .qc-ltr { width: 32px; height: 32px; border-radius: 10px; background: rgba(26,39,68,.8); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--text3); flex-shrink: 0; }
+    .qc-opt.sel .qc-ltr { background: var(--accent); border-color: transparent; color: #fff; }
+  </style>
 </head>
 <body>
-  <div id="phase-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px">
-    <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
-    <p style="color:var(--text2);font-size:14px">Učitavanje kviza...</p>
+<div id="phase-intro" style="display:none">
+  <div class="intro-box">
+    <div style="font-size:38px;margin-bottom:16px">📝</div>
+    <div class="intro-title" id="i-title"></div>
+    <div class="intro-desc" id="i-desc"></div>
+    <div class="intro-meta">
+      <div class="im-item"><div class="im-lbl">Pitanja</div><div class="im-val" id="i-num"></div></div>
+      <div class="im-item"><div class="im-lbl">Vremenski limit</div><div class="im-val" id="i-time"></div></div>
+      <div class="im-item"><div class="im-lbl">Ukupno bodova</div><div class="im-val" id="i-pts"></div></div>
+      <div class="im-item"><div class="im-lbl">Težina</div><div class="im-val" id="i-diff"></div></div>
+    </div>
+    <button class="btn btn-primary btn-full btn-lg" id="start-btn" style="margin-top:16px">▶ Počni kviz</button>
   </div>
-  <div id="app-root"></div>
-  <script type="module">
+</div>
+<div id="phase-quiz" style="display:none">
+  <div class="quiz-topbar">
+    <div class="qtb-inner">
+      <div><span id="qtb-prog" style="font-size:12px;color:var(--text3)">0/0</span> <span id="qtb-title" style="font-weight:600;margin-left:12px"></span></div>
+      <div class="qtb-timer" id="qtb-timer">30:00</div>
+    </div>
+  </div>
+  <div class="quiz-body">
+    <div class="quiz-nav">
+      <div class="nav-dots" id="nav-dots"></div>
+      <button class="btn btn-danger btn-full" id="submit-btn" style="margin-top:16px">✓ Predaj kviz</button>
+    </div>
+    <div class="card" id="q-card" style="border-radius:20px;padding:28px"></div>
+  </div>
+</div>
+<div id="phase-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px">
+  <div class="spinner" style="width:36px;height:36px;border-width:3px"></div>
+  <p style="color:var(--text2);font-size:14px" id="load-msg">Učitavanje kviza...</p>
+</div>
+<script type="module">
   import { auth, db } from '/js/firebase-config.js';
   import { startPresence } from '/js/presence.js';
   import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-  import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { doc, getDoc, addDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { toast } from '/js/utils.js';
 
-  // Privremeni restore: puna stranica dolazi u sljedećem commitu
-  // Ovo sprječava prazan placeholder dok se ne push-a kompletan fajl
+  const params = new URLSearchParams(location.search);
+  const quizId = params.get('id');
+  let quiz, questions, answers = {}, currentIdx = 0, timeLeft, totalTime, timerRef, user;
+
   onAuthStateChanged(auth, async (u) => {
     if (u) startPresence('/take-quiz');
     if (!u) { location.href = '/login'; return; }
-    // Reload from cache bust - try to load full page from backup path if exists
-    const params = new URLSearchParams(location.search);
-    document.getElementById('phase-loading').innerHTML =
-      '<p style="color:#94A3B8;max-width:360px;text-align:center;line-height:1.5">Stranica se ažurira. Osvježi za 10 sekundi (Ctrl+Shift+R).<br><br>Ako i dalje vidiš ovo, javi adminu.</p>';
+    user = u;
+    if (!quizId) { location.href = '/student'; return; }
+    await loadQuiz();
   });
-  </script>
+
+  async function loadQuiz() {
+    try {
+      const snap = await getDoc(doc(db, 'quizzes', quizId));
+      if (!snap.exists()) { toast('Kviz nije pronađen', 'error'); setTimeout(() => location.href = '/student', 1500); return; }
+      quiz = { id: snap.id, ...snap.data() };
+      questions = [...quiz.questions];
+      if (quiz.shuffleQuestions) questions.sort(() => Math.random() - 0.5);
+      showIntro();
+    } catch(e) { toast('Greška: ' + e.message, 'error'); }
+  }
+
+  function showIntro() {
+    document.getElementById('phase-loading').style.display = 'none';
+    document.getElementById('phase-intro').style.display = 'flex';
+    document.getElementById('i-title').textContent = quiz.title;
+    document.getElementById('i-desc').textContent = quiz.description || '';
+    document.getElementById('i-num').textContent = questions.length;
+    document.getElementById('i-time').textContent = (quiz.timeLimit || 30) + ' min';
+    document.getElementById('i-pts').textContent = quiz.totalPoints || questions.length;
+    document.getElementById('i-diff').textContent = quiz.difficulty;
+  }
+
+  document.getElementById('start-btn').onclick = function() {
+    window._quizActive = true;
+    document.getElementById('phase-intro').style.display = 'none';
+    document.getElementById('phase-quiz').style.display = 'block';
+    document.getElementById('qtb-title').textContent = quiz.title;
+    totalTime = (quiz.timeLimit || 30) * 60;
+    timeLeft = totalTime;
+    buildNav();
+    renderQ(0);
+    startTimer();
+  };
+
+  function buildNav() {
+    document.getElementById('nav-dots').innerHTML = questions.map((_, i) =>
+      '<button class="nd" id="nd-' + i + '" onclick="goTo(' + i + ')">' + (i+1) + '</button>'
+    ).join('');
+  }
+
+  function renderQ(idx) {
+    currentIdx = idx;
+    const q = questions[idx];
+    const answered = Object.keys(answers).length;
+    document.getElementById('qtb-prog').textContent = answered + '/' + questions.length;
+    questions.forEach((_, i) => {
+      const nd = document.getElementById('nd-' + i);
+      if (nd) nd.className = 'nd' + (i === idx ? ' cur' : (answers[questions[i].id] ? ' ans' : ''));
+    });
+    const letters = ['A','B','C','D','E'];
+    let optsHtml = '';
+    q.options.forEach((opt, i) => {
+      const sel = answers[q.id] === opt ? ' sel' : '';
+      const safe = opt.replace(/'/g, "\\'");
+      optsHtml += '<button class="qc-opt' + sel + '" onclick="answer(\'' + q.id + '\',\'' + safe + '\',' + idx + ')">' +
+        '<span class="qc-ltr">' + (letters[i]||(i+1)) + '</span><span>' + opt + '</span></button>';
+    });
+    let nav = '<button class="btn btn-ghost" ' + (idx===0?'disabled':'') + ' onclick="goTo(' + (idx-1) + ')">← Prethodno</button>';
+    if (idx < questions.length-1) nav += '<button class="btn btn-primary" onclick="goTo(' + (idx+1) + ')">Sljedeće →</button>';
+    else nav += '<button class="btn btn-success" onclick="confirmSubmit()">✓ Predaj</button>';
+    document.getElementById('q-card').innerHTML =
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Pitanje ' + (idx+1) + ' / ' + questions.length + '</div>' +
+      '<div style="font-size:20px;font-weight:600;margin-bottom:20px">' + q.question + '</div>' +
+      optsHtml + '<div style="display:flex;justify-content:space-between;margin-top:20px">' + nav + '</div>';
+  }
+
+  window.goTo = (i) => renderQ(i);
+  window.answer = (qid, opt, idx) => { answers[qid] = opt; renderQ(idx); };
+  window.confirmSubmit = () => { if (confirm('Predati kviz?')) submitQuiz(); };
+  document.getElementById('submit-btn').onclick = window.confirmSubmit;
+
+  function startTimer() {
+    updateTimer();
+    timerRef = setInterval(() => {
+      timeLeft--;
+      updateTimer();
+      if (timeLeft <= 0) { clearInterval(timerRef); window._quizActive = false; submitQuiz(); }
+    }, 1000);
+  }
+  function updateTimer() {
+    const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
+    const s = String(timeLeft%60).padStart(2,'0');
+    document.getElementById('qtb-timer').textContent = m + ':' + s;
+  }
+  window.autoSubmitQuiz = submitQuiz;
+
+  async function submitQuiz() {
+    clearInterval(timerRef);
+    window._quizActive = false;
+    document.getElementById('phase-quiz').style.display = 'none';
+    document.getElementById('phase-loading').style.display = 'flex';
+    document.getElementById('load-msg').textContent = 'Kviz se ocjenjuje...';
+    try {
+      const res = await fetch('/api/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questions, studentAnswers: answers, studentName: user.email.split('@')[0] })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      let feedback = '';
+      try {
+        const fb = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result: data.result, quizTitle: quiz.title })
+        });
+        feedback = (await fb.json()).feedback || '';
+      } catch(e) {}
+      const userSnap = await getDoc(doc(db, 'users', user.uid));
+      const uData = userSnap.data() || {};
+      const resultData = {
+        ...data.result, userId: user.uid, quizId, quizTitle: quiz.title,
+        quizSubject: quiz.subject || '', razred: uData.razred || '', smjer: uData.smjer || '',
+        showResults: quiz.showResults || 'always', completedAt: new Date().toISOString()
+      };
+      const docRef = await addDoc(collection(db, 'results'), resultData);
+      sessionStorage.setItem('lastResult', JSON.stringify({ ...resultData, id: docRef.id, feedback, showExplanations: quiz.showExplanations }));
+      location.href = '/result?id=' + docRef.id + '&fresh=1';
+    } catch(e) {
+      toast('Greška pri predaji: ' + e.message, 'error');
+      document.getElementById('phase-loading').style.display = 'none';
+      document.getElementById('phase-quiz').style.display = 'block';
+      window._quizActive = true;
+    }
+  }
+</script>
 </body>
 </html>
