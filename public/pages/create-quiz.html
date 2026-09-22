@@ -1,135 +1,16 @@
 <!DOCTYPE html>
-<html lang="bs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KvizMajstor — Kreiraj kviz</title>
-  <link rel="stylesheet" href="/css/style.css" />
-</head>
-<body>
-  <nav class="navbar">
-    <div class="wrap">
-      <a class="nb-brand" href="/admin"><span class="nb-logo">📚</span><span class="nb-title">KvizMajstor</span></a>
-      <div class="nb-right">
-        <span class="badge badge-purple">👑 Admin</span>
-        <button class="btn btn-ghost btn-sm" id="logout-btn">Odjava</button>
-      </div>
-    </div>
-  </nav>
-  <div class="wrap" style="padding:32px 0 80px">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:32px">
-      <a href="/admin" class="btn btn-ghost btn-sm">← Nazad</a>
-      <h1 style="font-size:26px;font-weight:700">✨ Kreiraj novi kviz</h1>
-    </div>
-    <div class="card" style="max-width:720px">
-      <div class="fg" style="margin-bottom:14px">
-        <label>PDF gradivo</label>
-        <input type="file" id="pdf-input" accept=".pdf" class="input" />
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="fg"><label>Predmet</label><input class="input" id="subject" placeholder="Npr. Elektronika" /></div>
-        <div class="fg"><label>Tema</label><input class="input" id="topic" placeholder="Npr. Modul M4" /></div>
-        <div class="fg"><label>Broj pitanja</label>
-          <select class="select" id="numQ"><option value="5">5</option><option value="10" selected>10</option><option value="15">15</option><option value="20">20</option></select>
-        </div>
-        <div class="fg"><label>Vrijeme (min)</label>
-          <select class="select" id="timeLimit"><option value="15">15</option><option value="30" selected>30</option><option value="45">45</option></select>
-        </div>
-        <div class="fg"><label>Težina</label>
-          <select class="select" id="difficulty"><option value="lako">Lako</option><option value="srednje" selected>Srednje</option><option value="teško">Teško</option></select>
-        </div>
-        <div class="fg"><label>Pregled rezultata</label>
-          <select class="select" id="showResults"><option value="always">Uvijek</option><option value="after_close">Nakon zatvaranja</option><option value="never">Nikad</option></select>
-        </div>
-      </div>
-      <div style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
-        <button class="btn btn-primary" id="gen-btn">🚀 Generiši kviz</button>
-      </div>
-      <div id="status" style="margin-top:16px;font-size:14px;color:var(--text2)"></div>
-      <div id="preview" style="margin-top:24px;display:none"></div>
-      <div id="save-wrap" style="margin-top:16px;display:none">
-        <input class="input" id="quiz-title" placeholder="Naziv kviza" style="margin-bottom:12px" />
-        <button class="btn btn-success" id="save-btn">💾 Sačuvaj kviz</button>
-      </div>
-    </div>
-  </div>
-  <script type="module">
-    import { auth, db } from '/js/firebase-config.js';
-    import { startPresence } from '/js/presence.js';
-    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { doc, getDoc, addDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { toast, btnLoad, btnReset } from '/js/utils.js';
-
-    let generated = null;
-    let pdfFile = null;
-
-    onAuthStateChanged(auth, async (u) => {
-      if (u) startPresence('/create-quiz');
-      if (!u) { location.href = '/login'; return; }
-      const snap = await getDoc(doc(db, 'users', u.uid));
-      if (snap.data()?.role !== 'admin') { location.href = '/student'; return; }
-    });
-    document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.href = '/login');
-    document.getElementById('pdf-input').onchange = (e) => { pdfFile = e.target.files[0] || null; };
-
-    document.getElementById('gen-btn').onclick = async function() {
-      if (!pdfFile) { toast('Odaberi PDF', 'error'); return; }
-      const btn = this;
-      btnLoad(btn, 'Generišem...');
-      document.getElementById('status').textContent = 'AI generiše pitanja...';
-      try {
-        const fd = new FormData();
-        fd.append('pdf', pdfFile);
-        fd.append('numQuestions', document.getElementById('numQ').value);
-        fd.append('difficulty', document.getElementById('difficulty').value);
-        fd.append('questionTypes', JSON.stringify(['multiple_choice']));
-        fd.append('subject', document.getElementById('subject').value);
-        fd.append('topic', document.getElementById('topic').value);
-        const res = await fetch('/api/generate-quiz', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Greška');
-        generated = data.questions;
-        document.getElementById('status').textContent = 'Generisano ' + generated.length + ' pitanja.';
-        document.getElementById('preview').style.display = 'block';
-        document.getElementById('preview').innerHTML = generated.map((q,i) =>
-          '<div class="card" style="margin-bottom:10px;padding:14px"><strong>' + (i+1) + '. ' + q.question + '</strong><div style="font-size:13px;color:var(--text2);margin-top:6px">' +
-          (q.options||[]).map(o => (o===q.correctAnswer?'✓ ':'') + o).join('<br>') + '</div></div>'
-        ).join('');
-        document.getElementById('save-wrap').style.display = 'block';
-        document.getElementById('quiz-title').value = (document.getElementById('subject').value || 'Kviz') + ' — ' + (document.getElementById('topic').value || 'Nova tema');
-        toast('Kviz generisan!', 'success');
-      } catch(e) {
-        toast(e.message, 'error');
-        document.getElementById('status').textContent = e.message;
-      }
-      btnReset(btn);
-    };
-
-    document.getElementById('save-btn').onclick = async function() {
-      if (!generated) return;
-      const title = document.getElementById('quiz-title').value.trim();
-      if (!title) { toast('Unesi naziv', 'error'); return; }
-      const btn = this;
-      btnLoad(btn, 'Čuvam...');
-      try {
-        await addDoc(collection(db, 'quizzes'), {
-          title,
-          subject: document.getElementById('subject').value,
-          topic: document.getElementById('topic').value,
-          description: '',
-          difficulty: document.getElementById('difficulty').value,
-          timeLimit: parseInt(document.getElementById('timeLimit').value),
-          showResults: document.getElementById('showResults').value,
-          questions: generated,
-          totalPoints: generated.length,
-          status: 'draft',
-          createdAt: new Date().toISOString()
-        });
-        toast('Kviz sačuvan!', 'success');
-        setTimeout(() => location.href = '/admin', 1000);
-      } catch(e) { toast(e.message, 'error'); }
-      btnReset(btn);
-    };
-  </script>
-</body>
-</html>
+<html lang="bs"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>KvizMajstor — Kreiraj kviz</title></head>
+<body style="background:#0B1120;color:#94A3B8;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif">
+<p>Učitavanje…</p>
+<script>
+(async()=>{
+  try{
+    const [a,b]=await Promise.all([
+      fetch('/pages/cq-p1.html?v=2').then(r=>{if(!r.ok)throw new Error(r.status);return r.text()}),
+      fetch('/pages/cq-p2.html?v=2').then(r=>{if(!r.ok)throw new Error(r.status);return r.text()})
+    ]);
+    document.open();document.write(a+b);document.close();
+  }catch(e){document.body.innerHTML='<p style="color:#F87171">Greška: '+e.message+'</p>';}
+})();
+</script>
+</body></html>
