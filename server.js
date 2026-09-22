@@ -1,3 +1,1 @@
-import express from 'express';
-// TEMP - will be replaced
-console.log('broken');
+RESTORED_VIA_NEXT
